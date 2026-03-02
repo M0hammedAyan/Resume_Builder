@@ -14,6 +14,8 @@ function ProfilePanel({ profile, onPreviewResume }) {
     projects: true,
     skills: true,
     achievements: true,
+    patents: true,
+    certifications: true,
     documents: true
   })
 
@@ -156,6 +158,8 @@ function ProfilePanel({ profile, onPreviewResume }) {
         {renderSection('Experience', profile.experience || [], 'experience')}
         {renderSection('Projects', profile.projects || [], 'projects')}
         {renderSection('Skills', profile.skills || [], 'skills')}
+        {renderSection('Patents & Publications', profile.patents || [], 'patents')}
+        {renderSection('Certifications', profile.certifications || [], 'certifications')}
         {renderSection('Achievements', profile.achievements || [], 'achievements')}
         {profile.documents && profile.documents.length > 0 && (
           renderSection('Imported Documents', profile.documents, 'documents')

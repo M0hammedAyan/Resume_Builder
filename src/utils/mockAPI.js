@@ -21,112 +21,100 @@ export async function mockAIResponse(userMessage) {
 
   if (message.includes('project') || message.includes('built') || message.includes('developed')) {
     category = 'Project'
+    const projectData = extractProject(userMessage)
     suggestion = {
       category: 'Project',
       resumeEntry: {
-        title: extractProjectName(userMessage),
-        description: extractDescription(userMessage),
-        bullets: [
-          `Developed ${extractProjectName(userMessage)} using modern technologies`,
-          `Implemented key features that improved ${extractBenefit(userMessage)}`,
-          `Collaborated with team members to deliver project on time`
-        ]
+        title: projectData.title,
+        description: projectData.description
       },
-      resumeBullets: [
-        `Developed ${extractProjectName(userMessage)} using modern technologies`,
-        `Implemented key features that improved ${extractBenefit(userMessage)}`
-      ],
-      data: {
-        title: extractProjectName(userMessage),
-        description: extractDescription(userMessage),
-        bullets: [
-          `Developed ${extractProjectName(userMessage)} using modern technologies`,
-          `Implemented key features that improved ${extractBenefit(userMessage)}`
-        ]
-      }
+      data: projectData
     }
-  } else if (message.includes('skill') || message.includes('learned') || message.includes('certified')) {
+  } else if (message.includes('skill')) {
     category = 'Skill'
+    const skills = extractSkills(userMessage)
     suggestion = {
       category: 'Skill',
       resumeEntry: {
-        title: extractSkill(userMessage),
-        description: `Proficient in ${extractSkill(userMessage)} with hands-on experience`
+        title: skills.join(', ')
       },
-      resumeBullets: [
-        `Proficient in ${extractSkill(userMessage)}`,
-        `Certified in ${extractSkill(userMessage)} with hands-on experience`
-      ],
-      data: extractSkill(userMessage)
+      data: skills
+    }
+  } else if (message.includes('patent') || message.includes('publication') || message.includes('published') || message.includes('paper')) {
+    category = 'Patent'
+    const patentData = extractPatent(userMessage)
+    suggestion = {
+      category: 'Patent',
+      resumeEntry: {
+        title: patentData.title,
+        description: patentData.year
+      },
+      data: patentData
+    }
+  } else if (message.includes('certificate') || message.includes('certification') || message.includes('certified')) {
+    category = 'Certification'
+    const certData = extractCertification(userMessage)
+    suggestion = {
+      category: 'Certification',
+      resumeEntry: {
+        title: certData.title,
+        description: certData.source
+      },
+      data: certData
     }
   } else if (
     message.includes('graduated') || 
     message.includes('degree') || 
     message.includes('university') ||
     message.includes('studied') ||
-    message.includes('completed my education') ||
-    message.includes('completed education') ||
     message.includes('bachelor') ||
     message.includes('master') ||
     message.includes('phd') ||
     message.includes('diploma') ||
-    message.includes('college')
+    message.includes('college') ||
+    message.includes('be ') || message.includes('b.e') ||
+    message.includes('btech') || message.includes('b.tech')
   ) {
     category = 'Education'
+    const eduData = extractEducation(userMessage)
     suggestion = {
       category: 'Education',
       resumeEntry: {
-        title: extractEducation(userMessage),
-        description: 'Completed with dedication and excellence'
+        title: eduData.course,
+        description: `${eduData.college} | ${eduData.duration}`
       },
-      resumeBullets: [
-        `Earned ${extractEducation(userMessage)}`,
-        `Completed coursework in relevant field with strong academic performance`
-      ],
-      data: {
-        title: extractEducation(userMessage),
-        description: 'Completed with dedication and excellence'
-      }
+      data: eduData
     }
   } else if (message.includes('award') || message.includes('achievement') || message.includes('recognition')) {
     category = 'Achievement'
     suggestion = {
       category: 'Achievement',
       resumeEntry: {
-        title: extractAchievement(userMessage),
-        description: `Recognized for ${extractAchievement(userMessage)}`
+        title: extractAchievement(userMessage)
       },
-      resumeBullets: [
-        `Recognized for ${extractAchievement(userMessage)}`,
-        `Demonstrated excellence in professional endeavors`
-      ],
       data: extractAchievement(userMessage)
     }
-  } else {
-    // Default to Experience
+  } else if (message.includes('intern') || message.includes('work') || message.includes('job') || message.includes('company') || message.includes('experience')) {
+    category = 'Experience'
+    const expData = extractExperience(userMessage)
     suggestion = {
       category: 'Experience',
       resumeEntry: {
-        title: extractExperience(userMessage),
-        description: userMessage,
-        bullets: [
-          `Worked on ${extractExperience(userMessage)}`,
-          `Delivered results in professional capacity`,
-          `Collaborated effectively with team members`
-        ]
+        title: expData.position,
+        description: `${expData.company} | ${expData.description}`
       },
-      resumeBullets: [
-        `Worked on ${extractExperience(userMessage)}`,
-        `Delivered results in professional capacity`
-      ],
-      data: {
-        title: extractExperience(userMessage),
-        description: userMessage,
-        bullets: [
-          `Worked on ${extractExperience(userMessage)}`,
-          `Delivered results in professional capacity`
-        ]
-      }
+      data: expData
+    }
+  } else {
+    // Default to Experience
+    const expData = extractExperience(userMessage)
+    suggestion = {
+      category: 'Experience',
+      resumeEntry: {
+        title: expData.position,
+        description: `${expData.company} | ${expData.description}`
+      },
+      data: expData
     }
   }
 
@@ -137,52 +125,134 @@ export async function mockAIResponse(userMessage) {
 }
 
 // Helper functions to extract information from user messages
-function extractProjectName(message) {
-  const projectMatch = message.match(/(?:project|built|developed)\s+(?:on|about|for)?\s*([^.]+)/i)
-  if (projectMatch) return projectMatch[1].trim()
-  return 'a new project'
+
+function extractProject(message) {
+  const parts = message.split(/[-–—]/)
+  let title = 'Project'
+  let description = message
+
+  if (parts.length >= 2) {
+    title = parts[0].trim()
+    description = parts.slice(1).join('-').trim()
+  } else {
+    const match = message.match(/(?:project|built|developed)\s+(?:on|about|for)?\s*([^.,:]+)/i)
+    if (match) title = match[1].trim()
+  }
+
+  return { title, description }
 }
 
-function extractBenefit(message) {
-  if (message.includes('efficiency')) return 'operational efficiency'
-  if (message.includes('accuracy')) return 'data accuracy'
-  if (message.includes('speed')) return 'processing speed'
-  return 'overall performance'
-}
-
-function extractDescription(message) {
-  // Return a cleaned version of the message
-  return message.charAt(0).toUpperCase() + message.slice(1) + '.'
-}
-
-function extractSkill(message) {
-  const skillMatch = message.match(/(?:learned|skill|certified|proficient in)\s+([^.]+)/i)
-  if (skillMatch) return skillMatch[1].trim()
+function extractSkills(message) {
+  const skillKeywords = ['python', 'javascript', 'react', 'java', 'c++', 'machine learning', 'ai', 'data science', 'aws', 'docker', 'kubernetes']
+  const found = []
   
-  // Try to find common tech terms
-  const techTerms = ['python', 'javascript', 'react', 'machine learning', 'data science', 'cloud computing']
-  for (const term of techTerms) {
-    if (message.includes(term)) return term
+  skillKeywords.forEach(skill => {
+    if (message.toLowerCase().includes(skill)) found.push(skill)
+  })
+
+  if (found.length === 0) {
+    const match = message.match(/skill[s]?[:\s]+([^.]+)/i)
+    if (match) return match[1].split(/,|and/).map(s => s.trim())
+    return [message.trim()]
   }
   
-  return 'new skills'
+  return found
 }
 
 function extractEducation(message) {
-  const eduMatch = message.match(/(?:graduated|degree|completed|earned)\s+([^.]+)/i)
-  if (eduMatch) return eduMatch[1].trim()
-  return 'my degree'
-}
+  let course = ''
+  let college = ''
+  let duration = ''
 
-function extractAchievement(message) {
-  const achMatch = message.match(/(?:award|achievement|recognition|won)\s+([^.]+)/i)
-  if (achMatch) return achMatch[1].trim()
-  return 'professional excellence'
+  // Extract course
+  const courseMatch = message.match(/(?:BE|B\.E|BTech|B\.Tech|ME|M\.E|MTech|M\.Tech|Bachelor|Master|PhD)\s+(?:in\s+)?([A-Za-z\s&]+?)(?:,|from|at|in|\d)/i)
+  if (courseMatch) {
+    course = courseMatch[0].trim()
+  }
+
+  // Extract college
+  const collegeMatch = message.match(/(?:from|at|in)\s+([A-Za-z\s.]+?)(?:,|\d|from|\(|$)/i)
+  if (collegeMatch) {
+    college = collegeMatch[1].trim()
+  } else {
+    const instituteMatch = message.match(/([A-Z][A-Za-z\s.]+(?:Institute|University|College)[A-Za-z\s.]*)/i)
+    if (instituteMatch) college = instituteMatch[1].trim()
+  }
+
+  // Extract duration
+  const durationMatch = message.match(/(\d{4})\s*(?:to|-|–)\s*(\d{4}|present)/i)
+  if (durationMatch) {
+    duration = `${durationMatch[1]} - ${durationMatch[2]}`
+  }
+
+  return {
+    course: course || 'Degree',
+    college: college || 'College',
+    duration: duration || 'Duration'
+  }
 }
 
 function extractExperience(message) {
-  // Try to extract the main topic
-  const words = message.split(' ').slice(0, 5).join(' ')
-  return words || 'professional work'
+  let company = ''
+  let position = ''
+  let description = message
+
+  // Extract company
+  const companyMatch = message.match(/(?:at|in|with|@)\s+([A-Z][A-Za-z\s.&]+?)(?:,|as|\.|$)/i)
+  if (companyMatch) {
+    company = companyMatch[1].trim()
+  }
+
+  // Extract position
+  const positionMatch = message.match(/(?:as|position|role|title)[:\s]+([^,\.]+)/i)
+  if (positionMatch) {
+    position = positionMatch[1].trim()
+  } else {
+    const roleMatch = message.match(/(?:intern|engineer|developer|manager|lead|designer|analyst|consultant)/i)
+    if (roleMatch) position = roleMatch[0]
+  }
+
+  return {
+    company: company || 'Company',
+    position: position || 'Position',
+    description: description
+  }
+}
+
+function extractPatent(message) {
+  const parts = message.split(/\(|\)|\d{4}/)
+  let title = message
+  let year = ''
+
+  const yearMatch = message.match(/(\d{4})/)
+  if (yearMatch) year = yearMatch[1]
+
+  const titleMatch = message.match(/^([^\(\d]+)/)
+  if (titleMatch) title = titleMatch[1].trim()
+
+  return { title, year }
+}
+
+function extractCertification(message) {
+  let title = ''
+  let source = ''
+
+  const parts = message.split(/[-–—]/)
+  if (parts.length >= 2) {
+    source = parts[0].trim()
+    title = parts.slice(1).join('-').trim()
+  } else {
+    const sourceMatch = message.match(/(?:from|by|at)\s+([^,\.]+)/i)
+    if (sourceMatch) source = sourceMatch[1].trim()
+    title = message.replace(sourceMatch?.[0] || '', '').trim()
+  }
+
+  return { title: title || message, source: source || 'Source' }
+}
+
+function extractAchievement(message) {
+  const achMatch = message.match(/(?:award|achievement|recognition|won)[:\s]+([^.]+)/i)
+  if (achMatch) return achMatch[1].trim()
+  return message.trim()
 }
 
