@@ -1,124 +1,319 @@
-<<<<<<< HEAD
-# Resume Builder
-<br>
-=======
-# ProMind - AI Professional Profile Assistant
+# ProMind - AI Resume Builder
 
-A conversational AI agent frontend for continuous professional profile management. Built for demonstration and interview purposes.
+> A modern, AI-powered resume builder with conversational interface and professional templates.
 
-## Overview
+![ProMind Banner](./screenshots/banner.png)
 
-ProMind allows users to:
-- Chat with an AI agent about professional updates
-- Review AI-generated resume updates and LinkedIn post drafts
-- Approve or reject updates before they are saved
-- View a structured professional profile that evolves over time
+## 🌟 Overview
 
-## Features
+ProMind is an intelligent resume builder that uses AI to help you create professional, ATS-friendly resumes. Chat with the AI assistant to add experiences, projects, and skills, then export your resume in multiple formats with customizable templates.
 
-- **Chat Interface**: ChatGPT-like conversation interface for natural language input
-- **AI Suggestions**: Automatic detection of professional updates (Projects, Experience, Skills, Education, Achievements)
-- **Human-in-the-Loop**: All updates require explicit user approval
-- **Living Resume**: Side panel showing structured profile that updates dynamically
-- **Clean UI**: Minimal, professional design suitable for academic presentation
+## ✨ Features
 
-## Tech Stack
+### 🤖 AI-Powered
+- **Conversational Interface**: Chat naturally to build your resume
+- **Smart Suggestions**: AI detects and categorizes your updates
+- **Content Improvement**: Enhance bullet points with action verbs and metrics
+- **ATS Scoring**: Real-time analysis of resume compatibility
 
-- React 18 (functional components)
-- Vite (build tool)
-- Tailwind CSS (styling)
-- Mock API (simulated backend responses)
+### 📝 Resume Management
+- **Multiple Templates**: Classic, Modern, and Minimal designs
+- **Drag & Drop**: Reorder sections and entries easily
+- **Real-time Preview**: See changes instantly
+- **PDF Export**: High-quality, multi-page PDF generation
 
-## Getting Started
+### 🎨 Modern UI
+- **Dark Mode**: Toggle between light and dark themes
+- **Responsive Design**: Works on desktop, tablet, and mobile
+- **Smooth Animations**: Polished user experience
+- **Professional Styling**: SaaS-style design with Tailwind CSS
 
-### Quick Start
+### 🔐 Secure
+- **JWT Authentication**: Secure user sessions
+- **Password Hashing**: bcrypt encryption
+- **Protected Routes**: API endpoint security
+- **Data Privacy**: User-specific resume storage
 
-**For detailed setup instructions, see [STARTUP_GUIDE.md](./STARTUP_GUIDE.md)**
+## 🛠️ Tech Stack
+
+### Frontend
+- **React 18** - UI library
+- **TypeScript** - Type safety
+- **Vite** - Build tool
+- **Tailwind CSS** - Styling
+- **React Hook Form** - Form management
+- **Zod** - Schema validation
+- **react-beautiful-dnd** - Drag and drop
+- **html2canvas + jsPDF** - PDF generation
+
+### Backend
+- **Node.js** - Runtime
+- **Express** - Web framework
+- **MongoDB** - Database
+- **Mongoose** - ODM
+- **JWT** - Authentication
+- **bcryptjs** - Password hashing
+
+## 📦 Installation
 
 ### Prerequisites
+- Node.js 16+
+- MongoDB (local or Atlas)
+- npm or yarn
 
-- Node.js 16+ and npm
-- Python 3.8+ (for backend)
-- Ollama (for AI backend)
+### Frontend Setup
 
-### Quick Setup
-
-1. **Install frontend dependencies:**
 ```bash
+# Clone repository
+git clone https://github.com/yourusername/promind.git
+cd promind
+
+# Install dependencies
 npm install
-```
 
-2. **Install backend dependencies:**
-```bash
-cd backend
-pip install -r requirements.txt
-```
+# Create environment file
+cp .env.example .env
 
-3. **Start Ollama:**
-```bash
-ollama serve
-```
+# Add your API URL
+echo "VITE_API_URL=http://localhost:5000/api" > .env
 
-4. **Start backend (in new terminal):**
-```bash
-cd backend
-python run.py
-```
-
-5. **Start frontend (in new terminal):**
-```bash
+# Start development server
 npm run dev
 ```
 
-6. **Open browser:** http://localhost:5173
+Frontend runs on `http://localhost:5173`
 
-### Build for Production
+### Backend Setup
 
 ```bash
-npm run build
+# Navigate to backend
+cd backend
+
+# Install dependencies
+npm install
+
+# Create environment file
+cp .env.example .env
+
+# Configure environment variables
+# Edit .env with your values:
+# - MONGO_URI
+# - JWT_SECRET
+# - PORT
+
+# Start server
+npm run dev
 ```
 
-## Project Structure
+Backend runs on `http://localhost:5000`
+
+## 🚀 Quick Start
+
+1. **Register an account**
+   ```bash
+   POST /api/auth/register
+   {
+     "email": "user@example.com",
+     "password": "password123"
+   }
+   ```
+
+2. **Start chatting**
+   - Type your professional updates
+   - AI detects and categorizes them
+   - Review and approve suggestions
+
+3. **Build your resume**
+   - Drag to reorder entries
+   - Choose a template
+   - Add personal information
+
+4. **Export**
+   - Download as PDF
+   - Print directly
+   - Share with employers
+
+## 📚 API Documentation
+
+### Authentication
+
+```bash
+# Register
+POST /api/auth/register
+Body: { email, password }
+
+# Login
+POST /api/auth/login
+Body: { email, password }
+
+# Get current user
+GET /api/auth/me
+Headers: { Authorization: "Bearer <token>" }
+```
+
+### Resumes
+
+```bash
+# Create resume
+POST /api/resumes
+Headers: { Authorization: "Bearer <token>" }
+Body: { title, content }
+
+# Get all resumes
+GET /api/resumes
+Headers: { Authorization: "Bearer <token>" }
+
+# Get single resume
+GET /api/resumes/:id
+Headers: { Authorization: "Bearer <token>" }
+
+# Update resume
+PUT /api/resumes/:id
+Headers: { Authorization: "Bearer <token>" }
+Body: { title, content }
+
+# Delete resume
+DELETE /api/resumes/:id
+Headers: { Authorization: "Bearer <token>" }
+```
+
+### AI Features
+
+```bash
+# Improve bullet points
+POST /api/ai/improve-bullets
+Headers: { Authorization: "Bearer <token>" }
+Body: { bullets: ["..."], section: "experience" }
+
+# Score resume for ATS
+POST /api/ai/score-resume
+Headers: { Authorization: "Bearer <token>" }
+Body: { content: {...} }
+```
+
+See [API_DOCS.md](./API_DOCS.md) for complete documentation.
+
+## 📁 Project Structure
 
 ```
-src/
-  components/
-    AppLayout.jsx          # Main layout with header
-    ChatWindow.jsx         # Primary chat interface
-    MessageBubble.jsx      # Individual message display
-    SuggestionCard.jsx     # AI suggestion display with actions
-    ProfilePanel.jsx       # Side panel showing professional profile
-  utils/
-    mockAPI.js            # Simulated backend API responses
-  App.jsx                 # Main app component with state management
-  main.jsx                # React entry point
-  index.css               # Tailwind CSS imports
+promind/
+├── src/                    # Frontend source
+│   ├── components/         # React components
+│   ├── contexts/          # React contexts
+│   ├── hooks/             # Custom hooks
+│   ├── services/          # API services
+│   ├── types/             # TypeScript types
+│   ├── utils/             # Utilities
+│   └── schemas/           # Validation schemas
+│
+├── backend/               # Backend source
+│   ├── controllers/       # Request handlers
+│   ├── routes/           # API routes
+│   ├── models/           # Database models
+│   ├── middleware/       # Custom middleware
+│   └── config/           # Configuration
+│
+├── public/               # Static assets
+└── docs/                 # Documentation
 ```
 
-## Design Principles
+See [PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md) for detailed structure guide.
 
-- **Clarity over Completeness**: Focus on demonstrating core concepts
-- **Human-in-the-Loop**: Emphasize user control and approval
-- **Trust & Transparency**: Clear indication that nothing is saved without approval
-- **Minimal UI**: Professional, research-friendly design
+## 🎨 Screenshots
 
-## Component Architecture
+### Chat Interface
+![Chat Interface](./screenshots/chat.png)
 
-All components are functional and use React hooks for state management. The app maintains three main state areas:
+### Resume Preview
+![Resume Preview](./screenshots/preview.png)
 
-1. **Chat History**: Messages between user and AI
-2. **Professional Profile**: Structured data (Education, Experience, Projects, Skills, Achievements)
-3. **Pending Suggestions**: AI-generated updates awaiting user approval
+### Template Selection
+![Templates](./screenshots/templates.png)
 
-## Mock API
+### Dark Mode
+![Dark Mode](./screenshots/dark-mode.png)
 
-The `mockAPI.js` file simulates backend responses. In a real implementation, this would connect to Ollama running locally. The mock API uses simple keyword matching to detect update categories and generate suggestions.
+## 🧪 Testing
 
-## Notes
+```bash
+# Frontend tests
+npm run test
 
-- No authentication implemented
-- No real API integration
-- Backend responses are simulated
-- Designed for demonstration purposes
+# Backend tests
+cd backend
+npm run test
 
->>>>>>> 659935f (v1.3)
+# E2E tests
+npm run test:e2e
+```
+
+## 📦 Deployment
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for complete deployment guide.
+
+### Quick Deploy
+
+**Frontend (Vercel):**
+```bash
+vercel --prod
+```
+
+**Backend (Render):**
+```bash
+# Push to GitHub
+# Connect repository in Render dashboard
+# Add environment variables
+# Deploy
+```
+
+## 🤝 Contributing
+
+Contributions are welcome! Please follow these steps:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📝 License
+
+This project is licensed under the MIT License - see [LICENSE](LICENSE) file for details.
+
+## 🔮 Future Improvements
+
+- [ ] LinkedIn integration
+- [ ] Cover letter generator
+- [ ] Resume analytics dashboard
+- [ ] Collaborative editing
+- [ ] Version history
+- [ ] Custom template builder
+- [ ] Job matching suggestions
+- [ ] Interview preparation tips
+- [ ] Multi-language support
+- [ ] Mobile app (React Native)
+
+## 🐛 Known Issues
+
+- PDF generation may have formatting issues on very long resumes
+- Dark mode needs refinement in some components
+- File upload limited to 10MB
+
+## 💬 Support
+
+- **Email**: support@promind.com
+- **Issues**: [GitHub Issues](https://github.com/yourusername/promind/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/yourusername/promind/discussions)
+
+## 🙏 Acknowledgments
+
+- OpenAI for AI inspiration
+- Tailwind CSS for styling framework
+- React community for amazing tools
+- All contributors and users
+
+---
+
+**Built with ❤️ by [Your Name](https://github.com/yourusername)**
+
+⭐ Star this repo if you find it helpful!

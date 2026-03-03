@@ -2,15 +2,18 @@ import { useState, useRef, useEffect } from 'react'
 import MessageBubble from './MessageBubble'
 import SuggestionCard from './SuggestionCard'
 import FileUpload from './FileUpload'
+import { Message, Suggestion } from '../types'
 
-/**
- * ChatWindow Component
- * 
- * Main chat interface similar to ChatGPT
- * Displays conversation history and handles user input
- * Shows AI suggestion cards when available
- * Includes file upload functionality for PDF/Word documents
- */
+interface ChatWindowProps {
+  messages: Message[]
+  onSendMessage: (message: string) => void
+  onFileUpload: (file: File) => void
+  pendingSuggestion: Suggestion | null
+  onApprove: (suggestion: Suggestion) => void
+  onReject: () => void
+  onEdit: () => void
+}
+
 function ChatWindow({
   messages,
   onSendMessage,
@@ -19,16 +22,15 @@ function ChatWindow({
   onApprove,
   onReject,
   onEdit
-}) {
+}: ChatWindowProps) {
   const [input, setInput] = useState('')
-  const messagesEndRef = useRef(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, pendingSuggestion])
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (input.trim()) {
       onSendMessage(input.trim())
@@ -38,7 +40,6 @@ function ChatWindow({
 
   return (
     <div className="flex flex-col h-full bg-[#212121]">
-      {/* Messages Area */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden px-4">
         <div className="max-w-3xl mx-auto py-4">
           {messages.length === 0 && (
@@ -71,7 +72,6 @@ function ChatWindow({
         </div>
       </div>
 
-      {/* Input Area - Fixed at bottom */}
       <div className="border-t border-gray-700 bg-[#343541] px-4 py-3 flex-shrink-0">
         <div className="max-w-3xl mx-auto">
           <form onSubmit={handleSubmit}>
@@ -102,4 +102,3 @@ function ChatWindow({
 }
 
 export default ChatWindow
-

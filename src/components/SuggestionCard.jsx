@@ -128,12 +128,12 @@ function SuggestionCard({ suggestion, onApprove, onReject, onEdit }) {
                     value={editedDescription}
                     onChange={(e) => setEditedDescription(e.target.value)}
                     rows={3}
-                    className="w-full px-2 py-1 text-sm bg-[#2a2b32] text-white border border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-2 py-1 text-sm bg-[#2a2b32] text-white border border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
                   />
                 </div>
               )}
               {editedBullets && editedBullets.length > 0 && (
-                <div>
+                <div className="max-h-60 overflow-y-auto">
                   <label className="block text-xs font-medium text-gray-300 mb-1">Bullets</label>
                   {editedBullets.map((bullet, idx) => (
                     <textarea
@@ -141,7 +141,7 @@ function SuggestionCard({ suggestion, onApprove, onReject, onEdit }) {
                       value={bullet}
                       onChange={(e) => handleBulletChange(idx, e.target.value)}
                       rows={2}
-                      className="w-full px-2 py-1 text-sm bg-[#2a2b32] text-white border border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-purple-500 mb-2"
+                      className="w-full px-2 py-1 text-sm bg-[#2a2b32] text-white border border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-purple-500 mb-2 resize-none"
                     />
                   ))}
                 </div>

@@ -30,7 +30,7 @@ function App() {
   const [pendingSuggestion, setPendingSuggestion] = useState(null)
   const [showResumePreview, setShowResumePreview] = useState(false)
   const [updateStatus, setUpdateStatus] = useState({ visible: false, section: null })
-  const [isPanelOpen, setIsPanelOpen] = useState(true)
+  const [isPanelOpen, setIsPanelOpen] = useState(false)
 
   /**
    * Handles user message submission
@@ -380,9 +380,27 @@ function App() {
 
   return (
     <AppLayout onDownloadResume={handleDownloadResume}>
-      <div className="flex flex-1 min-h-0 relative">
+      {/* Toggle Button - Top Left */}
+      <button
+        onClick={() => setIsPanelOpen(!isPanelOpen)}
+        className="fixed left-4 top-4 bg-gray-700 text-white p-2 rounded-lg hover:bg-gray-600 transition-colors z-30"
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+
+      <div className="flex flex-1 overflow-hidden">
+        {/* Profile Side Panel - Collapsible */}
+        <div className={`fixed left-0 top-0 h-screen bg-gray-50 border-r border-gray-200 transition-transform duration-300 ${isPanelOpen ? 'translate-x-0' : '-translate-x-full'} w-80 shadow-lg z-20`}>
+          <ProfilePanel 
+            profile={profile}
+            onPreviewResume={() => setShowResumePreview(true)}
+          />
+        </div>
+
         {/* Main Chat Area */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ${isPanelOpen ? 'ml-80' : 'ml-0'}`}>
           <ChatWindow
             messages={messages}
             onSendMessage={handleSendMessage}
@@ -391,22 +409,6 @@ function App() {
             onApprove={handleApproveSuggestion}
             onReject={handleRejectSuggestion}
             onEdit={handleEditSuggestion}
-          />
-        </div>
-
-        {/* Profile Side Panel - Collapsible */}
-        <div className={`absolute right-0 top-0 h-full bg-gray-50 border-l border-gray-200 transition-transform duration-300 ${isPanelOpen ? 'translate-x-0' : 'translate-x-full'} w-80 shadow-lg`}>
-          <button
-            onClick={() => setIsPanelOpen(!isPanelOpen)}
-            className="absolute -left-8 top-4 bg-gray-50 border border-gray-200 rounded-l-lg p-2 hover:bg-gray-100 transition-colors"
-          >
-            <svg className={`w-4 h-4 transition-transform ${isPanelOpen ? '' : 'rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <ProfilePanel 
-            profile={profile}
-            onPreviewResume={() => setShowResumePreview(true)}
           />
         </div>
       </div>
