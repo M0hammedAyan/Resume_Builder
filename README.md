@@ -33,7 +33,7 @@ ProMind allows users to:
 
 ### Quick Start
 
-**For detailed setup instructions, see [STARTUP_GUIDE.md](./STARTUP_GUIDE.md)**
+
 
 ### Prerequisites
 
