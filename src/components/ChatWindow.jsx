@@ -37,12 +37,12 @@ function ChatWindow({
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-[#212121]">
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+      <div className="flex-1 overflow-y-auto px-4">
         {messages.length === 0 && (
           <div className="flex items-center justify-center h-full">
-            <div className="text-center text-gray-500">
+            <div className="text-center text-gray-400">
               <p className="text-lg mb-2">Start updating your resume</p>
               <p className="text-sm">
                 Share a professional update and I'll help you add it to your resume.
@@ -51,44 +51,51 @@ function ChatWindow({
           </div>
         )}
 
-        {messages.map((message) => (
-          <MessageBubble key={message.id} message={message} />
-        ))}
+        <div className="max-w-3xl mx-auto py-4">
+          {messages.map((message) => (
+            <MessageBubble key={message.id} message={message} />
+          ))}
 
-        {/* Show pending suggestion after AI response */}
-        {pendingSuggestion && (
-          <SuggestionCard
-            suggestion={pendingSuggestion}
-            onApprove={onApprove}
-            onReject={onReject}
-            onEdit={onEdit}
-          />
-        )}
+          {pendingSuggestion && (
+            <div className="py-6">
+              <SuggestionCard
+                suggestion={pendingSuggestion}
+                onApprove={onApprove}
+                onReject={onReject}
+                onEdit={onEdit}
+              />
+            </div>
+          )}
+        </div>
 
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
-      <div className="border-t border-gray-200 bg-white px-6 py-4">
-        <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
-          <div className="flex gap-2 items-center">
-            <FileUpload onFileUpload={onFileUpload} />
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Describe a professional update for your resume..."
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            />
-            <button
-              type="submit"
-              disabled={!input.trim()}
-              className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              Send
-            </button>
-          </div>
-        </form>
+      {/* Input Area - Fixed at bottom */}
+      <div className="border-t border-gray-700 bg-[#343541] px-4 py-3 flex-shrink-0">
+        <div className="max-w-3xl mx-auto">
+          <form onSubmit={handleSubmit}>
+            <div className="flex gap-2 items-center bg-[#40414f] rounded-lg px-4 py-3">
+              <FileUpload onFileUpload={onFileUpload} />
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Message ProMind..."
+                className="flex-1 bg-transparent text-white placeholder-gray-400 focus:outline-none"
+              />
+              <button
+                type="submit"
+                disabled={!input.trim()}
+                className="p-2 text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-700 rounded transition-colors"
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                </svg>
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   )

@@ -23,11 +23,14 @@ function App() {
     experience: [],
     projects: [],
     skills: [],
-    achievements: []
+    achievements: [],
+    patents: [],
+    certifications: []
   })
   const [pendingSuggestion, setPendingSuggestion] = useState(null)
   const [showResumePreview, setShowResumePreview] = useState(false)
   const [updateStatus, setUpdateStatus] = useState({ visible: false, section: null })
+  const [isPanelOpen, setIsPanelOpen] = useState(true)
 
   /**
    * Handles user message submission
@@ -78,9 +81,14 @@ function App() {
       'education': 'education',
       'experience': 'experience',
       'achievement': 'achievements',
-      'achievements': 'achievements'
+      'achievements': 'achievements',
+      'patent': 'patents',
+      'patents': 'patents',
+      'publication': 'patents',
+      'certification': 'certifications',
+      'certifications': 'certifications'
     }
-    return sectionMap[categoryLower] || 'experience' // Default fallback
+    return sectionMap[categoryLower] || 'experience'
   }
 
   /**
@@ -150,15 +158,6 @@ function App() {
     const sectionDisplayName = suggestion.isDocumentImport 
       ? 'Document'
       : suggestion.category
-    const confirmMsg = {
-      id: Date.now(),
-      type: 'ai',
-      content: suggestion.isDocumentImport 
-        ? `✓ Document imported successfully. Content has been added to your resume.`
-        : `✓ ${sectionDisplayName} added to Resume ✔\n\nWould you like to preview your updated resume?`,
-      timestamp: new Date()
-    }
-    setMessages(prev => [...prev, confirmMsg])
   }
 
   /**
@@ -167,13 +166,6 @@ function App() {
    */
   const handleRejectSuggestion = () => {
     setPendingSuggestion(null)
-    const rejectMsg = {
-      id: Date.now(),
-      type: 'ai',
-      content: 'Understood. I won\'t add this to your resume.',
-      timestamp: new Date()
-    }
-    setMessages(prev => [...prev, rejectMsg])
   }
 
   /**
@@ -388,11 +380,9 @@ function App() {
 
   return (
     <AppLayout onDownloadResume={handleDownloadResume}>
-      {/* Main Content Area - Uses flex-1 to fill available space below header */}
-      {/* Removed overflow-hidden to allow scrolling within children */}
-      <div className="flex flex-1 min-h-0">
-        {/* Main Chat Area - Scrollable */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex flex-1 min-h-0 relative">
+        {/* Main Chat Area */}
+        <div className="flex-1 flex flex-col min-w-0">
           <ChatWindow
             messages={messages}
             onSendMessage={handleSendMessage}
@@ -404,8 +394,16 @@ function App() {
           />
         </div>
 
-        {/* Profile Side Panel - Scrollable */}
-        <div className="w-80 border-l border-gray-200 bg-gray-50 flex-shrink-0 overflow-hidden">
+        {/* Profile Side Panel - Collapsible */}
+        <div className={`absolute right-0 top-0 h-full bg-gray-50 border-l border-gray-200 transition-transform duration-300 ${isPanelOpen ? 'translate-x-0' : 'translate-x-full'} w-80 shadow-lg`}>
+          <button
+            onClick={() => setIsPanelOpen(!isPanelOpen)}
+            className="absolute -left-8 top-4 bg-gray-50 border border-gray-200 rounded-l-lg p-2 hover:bg-gray-100 transition-colors"
+          >
+            <svg className={`w-4 h-4 transition-transform ${isPanelOpen ? '' : 'rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
           <ProfilePanel 
             profile={profile}
             onPreviewResume={() => setShowResumePreview(true)}
@@ -413,7 +411,6 @@ function App() {
         </div>
       </div>
 
-      {/* Resume Preview Modal */}
       <ResumePreview
         profile={profile}
         isOpen={showResumePreview}
@@ -421,7 +418,6 @@ function App() {
         onDownload={handleDownloadResume}
       />
 
-      {/* Update Status Notification */}
       <ResumeUpdateStatus
         section={updateStatus.section}
         isVisible={updateStatus.visible}
