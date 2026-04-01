@@ -1,4 +1,4 @@
-# Deployment Guide - ProMind Resume Builder
+# Deployment Guide - CareerOS Resume Builder
 
 ## Frontend Deployment (Vercel)
 
@@ -55,7 +55,7 @@ Create `render.yaml`:
 ```yaml
 services:
   - type: web
-    name: promind-backend
+    name: careeros-backend
     env: node
     buildCommand: npm install
     startCommand: node server.js
@@ -86,7 +86,7 @@ app.use(cors({
 2. New → Web Service
 3. Connect Git repository
 4. Configure:
-   - Name: `promind-backend`
+   - Name: `careeros-backend`
    - Environment: Node
    - Build Command: `npm install`
    - Start Command: `node server.js`
@@ -255,3 +255,4 @@ Both Vercel and Render support automatic deployments:
 - Performance monitoring
 - Query profiler
 - Alerts for issues
+

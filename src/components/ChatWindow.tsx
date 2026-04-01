@@ -81,7 +81,7 @@ function ChatWindow({
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Message ProMind..."
+                placeholder="Message CareerOS..."
                 className="flex-1 bg-transparent text-white placeholder-gray-400 focus:outline-none"
               />
               <button
@@ -102,3 +102,4 @@ function ChatWindow({
 }
 
 export default ChatWindow
+

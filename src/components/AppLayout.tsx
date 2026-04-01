@@ -19,7 +19,7 @@ function AppLayout({ children, onDownloadResume }: AppLayoutProps) {
             </div>
             <div>
               <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
-                ProMind
+                CareerOS
               </h1>
               <p className="text-xs text-gray-400 dark:text-gray-500">AI Resume Assistant</p>
             </div>
@@ -39,3 +39,4 @@ function AppLayout({ children, onDownloadResume }: AppLayoutProps) {
 }
 
 export default AppLayout
+

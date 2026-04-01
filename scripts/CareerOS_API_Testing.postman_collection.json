@@ -1,0 +1,377 @@
+{
+  "info": {
+    "_postman_id": "careeros-api-collection",
+    "name": "CareerOS API Testing",
+    "description": "Complete API testing collection for CareerOS endpoints including new Resume Chat and JD Analysis",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health & Setup",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Career Events",
+      "item": [
+        {
+          "name": "Create Event - Payment System",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"raw_text\": \"Architected and deployed a real-time payment processing system handling $50M in annual transactions across 500K daily active users using event-driven architecture.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/events",
+              "host": ["{{base_url}}"],
+              "path": ["events"]
+            }
+          }
+        },
+        {
+          "name": "Create Event - CI/CD Pipeline",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"raw_text\": \"Improved CI pipeline reliability by reducing flaky tests 42% using pytest markers and stable fixtures, cutting deployment time from 20m to 3m.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/events",
+              "host": ["{{base_url}}"],
+              "path": ["events"]
+            }
+          }
+        },
+        {
+          "name": "Create Event - React Performance",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"raw_text\": \"Optimized React app performance, reducing bundle size by 35% and initial load time from 8s to 2.5s using code splitting and lazy loading.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/events",
+              "host": ["{{base_url}}"],
+              "path": ["events"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Resume Studio - NEW (Chatbot)",
+      "item": [
+        {
+          "name": "Resume Chat - Payment Platform",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"user_input\": \"I built a React app that processes payments and reduced load time by 40% by implementing caching\",\n  \"resume_id\": \"resume-1\",\n  \"context\": null\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/resume/chat",
+              "host": ["{{base_url}}"],
+              "path": ["resume", "chat"]
+            }
+          }
+        },
+        {
+          "name": "Resume Chat - Follow-up",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"user_input\": \"We had 500K daily users and processed $10M in annual transactions\",\n  \"resume_id\": \"resume-1\",\n  \"context\": \"User: I built a React app that processes payments and reduced load time by 40%\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/resume/chat",
+              "host": ["{{base_url}}"],
+              "path": ["resume", "chat"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Recruiter Lens - NEW (JD Analysis)",
+      "item": [
+        {
+          "name": "JD Eligibility Analysis",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"job_description\": \"Senior React Developer - Remote, $200-250K\\n\\nRequired Skills:\\n- 5+ years React/TypeScript development\\n- Next.js, Redux/Zustand state management\\n- REST APIs, GraphQL consumption\\n- Testing frameworks (Jest, React Testing Library)\\n- AWS or cloud platform experience\\n- Agile/Scrum methodology\\n\\nNice to Have:\\n- Performance optimization experience\\n- Web3/Blockchain knowledge\\n\\nResponsibilities:\\n- Build scalable React applications\\n- Mentor junior developers\\n- Code review and architecture discussions\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/resume/jd-eligibility",
+              "host": ["{{base_url}}"],
+              "path": ["resume", "jd-eligibility"]
+            }
+          }
+        },
+        {
+          "name": "JD Improvement Feedback",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"job_description\": \"Backend Engineer - Python/FastAPI - NYC, Hybrid\\n\\nRequired:\\n- 3+ years Python backend development\\n- FastAPI, Django, or similar frameworks\\n- SQL/PostgreSQL database design\\n- REST API design and development\\n- Docker and Kubernetes basics\\n- Git and agile development\\n\\nNice to Have:\\n- Microservices architecture\\n- Event-driven systems\\n- Message queues (RabbitMQ, Kafka)\\n- AWS/GCP experience\\n- System design skills\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/resume/jd-feedback",
+              "host": ["{{base_url}}"],
+              "path": ["resume", "jd-feedback"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Resume Generation (Original)",
+      "item": [
+        {
+          "name": "Generate Resume from JD",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"job_description\": \"Senior React Developer - 5+ years, TypeScript, Next.js, State management (Redux/Zustand), REST APIs, GraphQL, Testing (Jest), AWS/cloud platform, Agile. Responsibilities: Build scalable React apps, mentor juniors, code review, performance optimization, CI/CD.\",\n  \"k\": 6\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/resume/generate",
+              "host": ["{{base_url}}"],
+              "path": ["resume", "generate"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Resume Management",
+      "item": [
+        {
+          "name": "List Resume Versions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/resume/versions?user_id={{user_id}}&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["resume", "versions"],
+              "query": [
+                {
+                  "key": "user_id",
+                  "value": "{{user_id}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Compare Resume Versions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/resume/versions/compare?version_a_id=VERSION_A_UUID&version_b_id=VERSION_B_UUID",
+              "host": ["{{base_url}}"],
+              "path": ["resume", "versions", "compare"],
+              "query": [
+                {
+                  "key": "version_a_id",
+                  "value": "VERSION_A_UUID"
+                },
+                {
+                  "key": "version_b_id",
+                  "value": "VERSION_B_UUID"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Job Matching",
+      "item": [
+        {
+          "name": "Job Match Analysis",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"job_description\": \"Senior React Developer with 5+ years experience. Need TypeScript, Next.js, Redux, REST APIs, GraphQL, Jest testing, AWS knowledge. Lead technical discussions, mentor team, optimize performance.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/job-match",
+              "host": ["{{base_url}}"],
+              "path": ["job-match"]
+            }
+          }
+        },
+        {
+          "name": "Skill Gap Analysis",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/skill-gap?user_id={{user_id}}&job_description=Senior%20React%20Developer%20with%205%2B%20years%20experience.%20Need%20TypeScript%2C%20Next.js%2C%20Redux%2C%20REST%20APIs%2C%20GraphQL%2C%20Jest%20testing%2C%20AWS",
+              "host": ["{{base_url}}"],
+              "path": ["skill-gap"],
+              "query": [
+                {
+                  "key": "user_id",
+                  "value": "{{user_id}}"
+                },
+                {
+                  "key": "job_description",
+                  "value": "Senior React Developer with 5+ years experience. Need TypeScript, Next.js, Redux, REST APIs, GraphQL, Jest testing, AWS"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Career Insights",
+      "item": [
+        {
+          "name": "Get Career Insights",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/insights?user_id={{user_id}}&use_llm=false",
+              "host": ["{{base_url}}"],
+              "path": ["insights"],
+              "query": [
+                {
+                  "key": "user_id",
+                  "value": "{{user_id}}"
+                },
+                {
+                  "key": "use_llm",
+                  "value": "false"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Recruiter Simulation",
+      "item": [
+        {
+          "name": "Simulate Recruiter Feedback",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resume_text\": \"Built real-time payment system handling $50M annually with 500K users.\\nOptimized React app performance, 35% bundle reduction, 8s to 2.5s load time\\nImproved CI pipeline reliability 42% with pytest fixtures, deployment time 20m to 3m\\nLed team of 5 engineers, mentored 2 juniors, 92% code coverage\",\n  \"job_description\": \"Senior React Developer - 5+ years TypeScript/Next.js experience required. Redux/Zustand state management, REST APIs, GraphQL consumption. Jest testing, AWS/cloud platform, Agile methodology. Mentoring experience preferred.\",\n  \"use_llm\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/recruiter/simulate",
+              "host": ["{{base_url}}"],
+              "path": ["recruiter", "simulate"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "00000000-0000-0000-0000-000000000001",
+      "type": "string"
+    }
+  ]
+}

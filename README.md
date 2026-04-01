@@ -1,12 +1,12 @@
-# ProMind - AI Resume Builder
+# CareerOS - AI Resume Builder
 
 > A modern, AI-powered resume builder with conversational interface and professional templates.
 
-![ProMind Banner](./screenshots/banner.png)
+![CareerOS Banner](./screenshots/banner.png)
 
 ## 🌟 Overview
 
-ProMind is an intelligent resume builder that uses AI to help you create professional, ATS-friendly resumes. Chat with the AI assistant to add experiences, projects, and skills, then export your resume in multiple formats with customizable templates.
+CareerOS is an intelligent resume builder that uses AI to help you create professional, ATS-friendly resumes. Chat with the AI assistant to add experiences, projects, and skills, then export your resume in multiple formats with customizable templates.
 
 ## ✨ Features
 
@@ -65,8 +65,8 @@ ProMind is an intelligent resume builder that uses AI to help you create profess
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/promind.git
-cd promind
+git clone https://github.com/yourusername/careeros.git
+cd careeros
 
 # Install dependencies
 npm install
@@ -196,7 +196,7 @@ See [API_DOCS.md](./API_DOCS.md) for complete documentation.
 ## 📁 Project Structure
 
 ```
-promind/
+careeros/
 ├── src/                    # Frontend source
 │   ├── components/         # React components
 │   ├── contexts/          # React contexts
@@ -301,9 +301,9 @@ This project is licensed under the MIT License - see [LICENSE](LICENSE) file for
 
 ## 💬 Support
 
-- **Email**: support@promind.com
-- **Issues**: [GitHub Issues](https://github.com/yourusername/promind/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/promind/discussions)
+- **Email**: support@careeros.com
+- **Issues**: [GitHub Issues](https://github.com/yourusername/careeros/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/yourusername/careeros/discussions)
 
 ## 🙏 Acknowledgments
 
@@ -317,3 +317,4 @@ This project is licensed under the MIT License - see [LICENSE](LICENSE) file for
 **Built with ❤️ by [Your Name](https://github.com/yourusername)**
 
 ⭐ Star this repo if you find it helpful!
+

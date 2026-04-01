@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    body { font-family: "Consolas", monospace; font-size: 10.5pt; color: #121212; margin: 20px; }
+    h1 { margin: 0 0 4px 0; font-size: 18pt; }
+    h2 { margin: 14px 0 4px 0; font-size: 11pt; text-transform: uppercase; }
+    .line { border-top: 1px solid #222; margin: 6px 0 8px 0; }
+    .kv { margin: 2px 0; }
+    ul { margin: 6px 0 0 18px; }
+    li { margin-bottom: 5px; }
+    code { background: #f2f2f2; padding: 1px 4px; }
+  </style>
+</head>
+<body>
+  <h1>{{ user.name or "CareerOS Candidate" }}</h1>
+  <div class="kv">EMAIL: {{ user.email or "N/A" }}</div>
+  <div class="kv">LEVEL: {{ user.experience_level or "N/A" }}</div>
+  <div class="kv">TARGET: {{ target_roles | join(", ") }}</div>
+  <div class="line"></div>
+
+  <h2>Profile</h2>
+  <div>{{ summary }}</div>
+
+  <h2>Achievement Bullets</h2>
+  <ul>
+    {% for bullet in bullets %}
+      <li>{{ bullet }}</li>
+    {% endfor %}
+  </ul>
+
+  <h2>Technical Events</h2>
+  {% for event in events %}
+    <div class="kv"><code>{{ event.domain }}</code> {{ event.action }}</div>
+  {% endfor %}
+
+  <h2>Quality</h2>
+  <div class="kv">ATS={{ ats_score }}</div>
+</body>
+</html>

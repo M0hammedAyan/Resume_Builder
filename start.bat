@@ -1,6 +1,6 @@
 @echo off
 echo ========================================
-echo Starting ProMind Resume Builder
+echo Starting CareerOS Resume Builder
 echo ========================================
 echo.
 
@@ -52,7 +52,7 @@ start cmd /k "npm run dev"
 
 echo.
 echo ========================================
-echo ProMind is starting!
+echo CareerOS is starting!
 echo ========================================
 echo Frontend: http://localhost:5173
 echo Backend:  http://localhost:5000
@@ -67,3 +67,4 @@ echo Both servers are running in separate windows.
 echo Close those windows to stop the servers.
 echo.
 pause
+

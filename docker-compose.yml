@@ -1,0 +1,25 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: careeros-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - CAREEROS_OLLAMA_URL=${CAREEROS_OLLAMA_URL:-http://host.docker.internal:11434}
+      - CAREEROS_OLLAMA_MODEL=mistral
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: careeros-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    profiles: ["ollama"]
+
+volumes:
+  ollama_data:

@@ -1,0 +1,15 @@
+{
+  "event_id": "evt_ml_defect_001",
+  "timestamp": "2025-11-15T10:30:00Z",
+  "role_context": "Machine Learning Engineer",
+  "action": "Built a CNN model for defect detection",
+  "tools": ["Python", "PyTorch", "OpenCV"],
+  "domain": "Manufacturing AI",
+  "impact": {
+    "metric": "Defect detection accuracy",
+    "value": 92.0,
+    "improvement": "Improved accuracy by 18%"
+  },
+  "evidence": "Validation report v3",
+  "confidence": 0.93
+}

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    body { font-family: "Helvetica", sans-serif; font-size: 11pt; color: #202124; margin: 26px; }
+    .header { margin-bottom: 14px; }
+    .name { font-size: 22pt; font-weight: 700; letter-spacing: 0.4px; }
+    .meta { color: #4a4e52; margin-top: 4px; }
+    .chip { display: inline-block; border: 1px solid #c9cdd2; border-radius: 10px; padding: 2px 8px; margin-right: 4px; margin-top: 4px; font-size: 9pt; }
+    h2 { margin: 14px 0 6px 0; font-size: 12pt; color: #111; }
+    .card { border-left: 3px solid #6c8ea4; padding-left: 10px; margin-bottom: 8px; }
+    .muted { color: #5b6168; font-size: 10pt; }
+    ul { margin: 6px 0 0 18px; }
+    li { margin-bottom: 6px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="name">{{ user.name or "CareerOS Candidate" }}</div>
+    <div class="meta">{{ user.email or "" }}{% if user.email and user.experience_level %} | {% endif %}{{ user.experience_level or "" }}</div>
+    {% for role in target_roles %}
+      <span class="chip">{{ role }}</span>
+    {% endfor %}
+  </div>
+
+  <h2>Impact Summary</h2>
+  <div class="card">
+    <div>{{ summary }}</div>
+    <div class="muted">ATS Score {{ ats_score }}</div>
+  </div>
+
+  <h2>Experience Highlights</h2>
+  <ul>
+    {% for bullet in bullets %}
+      <li>{{ bullet }}</li>
+    {% endfor %}
+  </ul>
+
+  {% if events %}
+  <h2>Selected Event Context</h2>
+  {% for event in events %}
+    <div class="card">
+      <div><strong>{{ event.domain }}</strong> - {{ event.role_context }}</div>
+      <div class="muted">{{ event.action }}</div>
+    </div>
+  {% endfor %}
+  {% endif %}
+</body>
+</html>
