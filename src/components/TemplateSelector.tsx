@@ -1,95 +1,89 @@
-interface TemplateSelectorProps {
-  selectedTemplate: string
-  onSelectTemplate: (template: string) => void
-}
+import { motion } from "framer-motion";
+import { getAllTemplates, render_template, type TemplateId } from "../config/resume.templates";
+import { useCareerOSStore } from "../store/careeros.store";
+import { mapStoreResumeToTemplateData } from "../utils/templateResumeMapper";
+import { CheckCircle2 } from "lucide-react";
 
-function TemplateSelector({ selectedTemplate, onSelectTemplate }: TemplateSelectorProps) {
-  const templates = [
-    {
-      id: 'classic',
-      name: 'Classic',
-      description: 'Traditional serif layout',
-      preview: (
-        <div className="w-full h-32 bg-white border-2 border-gray-300 rounded p-2">
-          <div className="text-center border-b border-gray-400 pb-1 mb-2">
-            <div className="h-2 bg-gray-800 w-16 mx-auto mb-1"></div>
-            <div className="h-1 bg-gray-400 w-24 mx-auto"></div>
-          </div>
-          <div className="space-y-1">
-            <div className="h-1 bg-gray-600 w-12"></div>
-            <div className="h-1 bg-gray-300 w-full"></div>
-            <div className="h-1 bg-gray-300 w-full"></div>
-          </div>
-        </div>
-      )
-    },
-    {
-      id: 'modern',
-      name: 'Modern',
-      description: 'Two-column with sidebar',
-      preview: (
-        <div className="w-full h-32 bg-white border-2 border-gray-300 rounded flex overflow-hidden">
-          <div className="w-1/3 bg-gray-800 p-2">
-            <div className="h-2 bg-blue-400 w-8 mb-2"></div>
-            <div className="space-y-1">
-              <div className="h-1 bg-gray-300 w-full"></div>
-              <div className="h-1 bg-gray-300 w-full"></div>
-            </div>
-          </div>
-          <div className="w-2/3 p-2">
-            <div className="h-2 bg-gray-800 w-16 mb-2"></div>
-            <div className="space-y-1">
-              <div className="h-1 bg-gray-400 w-full"></div>
-              <div className="h-1 bg-gray-400 w-full"></div>
-            </div>
-          </div>
-        </div>
-      )
-    },
-    {
-      id: 'minimal',
-      name: 'Minimal',
-      description: 'Clean and spacious',
-      preview: (
-        <div className="w-full h-32 bg-white border-2 border-gray-300 rounded p-2">
-          <div className="mb-3">
-            <div className="h-3 bg-gray-900 w-20 mb-1"></div>
-            <div className="h-1 bg-gray-300 w-16"></div>
-          </div>
-          <div className="space-y-2">
-            <div className="h-1 bg-gray-200 w-8"></div>
-            <div className="h-1 bg-gray-400 w-full"></div>
-            <div className="h-1 bg-gray-400 w-3/4"></div>
-          </div>
-        </div>
-      )
-    }
-  ]
+export function TemplateSelector() {
+  const { selectedTemplate, setSelectedTemplate, resume } = useCareerOSStore();
+  const templates = getAllTemplates();
+  if (!resume) return null;
+  const currentTemplateData = mapStoreResumeToTemplateData(resume) as unknown as Record<string, unknown>;
 
   return (
-    <div className="mb-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-3">Select Template</h3>
-      <div className="grid grid-cols-3 gap-4">
-        {templates.map((template) => (
-          <button
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-semibold text-slate-100">
+          Choose Your Resume Template
+        </h3>
+        <p className="mt-1 text-sm text-slate-400">
+          Select a design that best represents your professional brand
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {templates.map((template, index) => (
+          <motion.button
             key={template.id}
-            onClick={() => onSelectTemplate(template.id)}
-            className={`p-4 rounded-lg border-2 transition-all ${
+            onClick={() => setSelectedTemplate(template.id)}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: index * 0.1 }}
+            className={`relative rounded-xl border-2 p-4 transition duration-200 ${
               selectedTemplate === template.id
-                ? 'border-purple-600 bg-purple-50'
-                : 'border-gray-200 hover:border-gray-300'
+                ? "border-cyan-500 bg-cyan-500/10"
+                : "border-slate-800 bg-slate-900/50 hover:border-slate-700"
             }`}
           >
-            {template.preview}
-            <div className="mt-3 text-left">
-              <h4 className="font-semibold text-gray-900">{template.name}</h4>
-              <p className="text-xs text-gray-500">{template.description}</p>
+            {/* Template Preview */}
+            <div
+              className="mb-3 aspect-[210/297] w-full overflow-hidden rounded-lg border border-slate-700 bg-white"
+              style={{
+                background: template.colors.background,
+              }}
+            >
+              <div
+                className="origin-top-left scale-[0.2] p-2"
+                style={{ width: "500%" }}
+                dangerouslySetInnerHTML={{
+                  __html: render_template(
+                    template.id as TemplateId,
+                    currentTemplateData,
+                  ),
+                }}
+              />
             </div>
-          </button>
+
+            {/* Template Info */}
+            <div className="text-left">
+              <h4 className="font-semibold text-slate-100">{template.name}</h4>
+              <p className="mt-1 text-xs text-slate-400">
+                {template.description}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-1">
+                {template.recommendedFor.slice(0, 2).map((rec) => (
+                  <span
+                    key={rec}
+                    className="text-xs px-2 py-1 rounded-full bg-slate-800 text-slate-300"
+                  >
+                    {rec}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Selected Indicator */}
+            {selectedTemplate === template.id && (
+              <motion.div
+                layoutId="selectedTemplate"
+                className="absolute top-2 right-2"
+              >
+                <CheckCircle2 className="h-5 w-5 text-cyan-400" />
+              </motion.div>
+            )}
+          </motion.button>
         ))}
       </div>
     </div>
-  )
+  );
 }
-
-export default TemplateSelector

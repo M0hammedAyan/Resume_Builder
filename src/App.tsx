@@ -1,75 +1,119 @@
-import { useMemo, useState } from "react";
-import { AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Sidebar } from "./components/layout/Sidebar";
-import { TopBar } from "./components/layout/TopBar";
-import { ToastStack } from "./components/ui/ToastStack";
-import { useToast } from "./hooks/useToast";
-import { DashboardPage } from "./pages/DashboardPage";
-import { EventsPage } from "./pages/EventsPage";
-import { ResumeStudioPage } from "./pages/ResumeStudioPageNew";
-import { RecruiterLensPage } from "./pages/RecruiterLensPage";
-import type { EventItem, NavPage, ResumeGenerateResponse } from "./types/app";
+import { ChatView } from "./components/ChatView";
+import { ResumeStudioView } from "./components/ResumeStudioView";
+import { RecruiterLensView } from "./components/RecruiterLensView";
+import { TemplateGalleryView } from "./components/TemplateGalleryView";
+import { InsightsView } from "./components/InsightsView";
+import { useCareerOSStore } from "./store/careeros.store";
 
 function App() {
-  const [page, setPage] = useState<NavPage>("dashboard");
-  const [events, setEvents] = useState<EventItem[]>([]);
-  const [resumeData, setResumeData] = useState<ResumeGenerateResponse | null>(null);
-  const [userId, setUserId] = useState("00000000-0000-0000-0000-000000000001");
-  const { toasts, push, dismiss } = useToast();
-
-  const apiBase = useMemo(
-    () => import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000",
-    [],
-  );
-
-  function showToast(title: string, message: string, variant?: "success" | "error" | "info") {
-    push({ title, message, variant });
-  }
+  const { currentPage } = useCareerOSStore();
 
   return (
-    <div className="min-h-screen bg-aurora px-3 py-4 text-slate-100 md:px-6 md:py-6">
-      <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-[260px_1fr]">
-        <Sidebar active={page} onSelect={setPage} />
-        <main className="grid gap-4">
-          <TopBar userId={userId} apiBase={apiBase} />
-          <section className="rounded-2xl border border-slate-800 bg-slate-900/50 p-4 backdrop-blur md:p-5">
-            <div className="mb-4 max-w-xs">
-              <label className="text-xs uppercase tracking-widest text-slate-400">Active user id</label>
-              <input
-                value={userId}
-                onChange={(e) => setUserId(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-sm"
-              />
-            </div>
+    <div className="flex h-screen overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+      {/* Sidebar */}
+      <Sidebar />
 
-            <AnimatePresence mode="wait">
-              {page === "dashboard" ? (
-                <DashboardPage key="dashboard" events={events} resumeData={resumeData} />
-              ) : null}
-              {page === "events" ? (
-                <EventsPage
-                  key="events"
-                  userId={userId}
-                  events={events}
-                  onEventCreated={(event) => setEvents((prev) => [...prev, event])}
-                  onToast={showToast}
-                />
-              ) : null}
-              {page === "resume" ? (
-                <ResumeStudioPage
-                  key="resume"
-                  userId={userId}
-                  onToast={showToast}
-                />
-              ) : null}
-              {page === "insights" ? (
-                <RecruiterLensPage key="insights" userId={userId} resumeData={resumeData} onToast={showToast} />
-              ) : null}
-            </AnimatePresence>
-          </section>
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col overflow-hidden ml-64">
+        {/* Header */}
+        <motion.header
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5 }}
+          className="border-b border-slate-800 bg-slate-900/50 backdrop-blur px-6 py-4"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-slate-100">
+                {currentPage === "chat"
+                  ? "Career Chat"
+                  : currentPage === "resume"
+                    ? "Resume Studio"
+                    : currentPage === "recruiter"
+                      ? "Recruiter Lens"
+                      : currentPage === "templates"
+                        ? "Templates"
+                        : "Career Insights"}
+              </h1>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-slate-500">Learn more</span>
+            </div>
+          </div>
+        </motion.header>
+
+        {/* Content Area */}
+        <main className="flex-1 overflow-auto p-6">
+          <AnimatePresence mode="wait">
+            {currentPage === "chat" && (
+              <motion.div
+                key="chat"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+                className="h-full"
+              >
+                <ChatView />
+              </motion.div>
+            )}
+
+            {currentPage === "resume" && (
+              <motion.div
+                key="resume"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+                className="h-full"
+              >
+                <ResumeStudioView />
+              </motion.div>
+            )}
+
+            {currentPage === "recruiter" && (
+              <motion.div
+                key="recruiter"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+                className="h-full"
+              >
+                <RecruiterLensView />
+              </motion.div>
+            )}
+
+            {currentPage === "templates" && (
+              <motion.div
+                key="templates"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+                className="h-full overflow-y-auto"
+              >
+                <TemplateGalleryView />
+              </motion.div>
+            )}
+
+            {currentPage === "insights" && (
+              <motion.div
+                key="insights"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+                className="h-full overflow-y-auto"
+              >
+                <InsightsView />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </main>
       </div>
-      <ToastStack toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }
