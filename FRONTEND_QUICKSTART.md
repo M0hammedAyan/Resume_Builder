@@ -1,5 +1,8 @@
 # CareerOS Frontend - Quick Start Guide
 
+> Last Updated: April 13, 2026
+
+
 ## Project Setup
 
 ### Prerequisites

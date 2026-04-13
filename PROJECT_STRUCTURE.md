@@ -1,5 +1,8 @@
 # Project Structure Guide
 
+> Last Updated: April 13, 2026
+
+
 ## Frontend Structure (Scalable)
 
 ```

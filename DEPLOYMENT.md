@@ -1,5 +1,8 @@
 # Deployment Guide - CareerOS Resume Builder
 
+> Last Updated: April 13, 2026
+
+
 ## Frontend Deployment (Vercel)
 
 ### 1. Prepare Frontend

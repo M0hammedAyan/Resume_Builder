@@ -1,5 +1,8 @@
 # CareerOS Frontend - Architecture & Component Hierarchy
 
+> Last Updated: April 13, 2026
+
+
 ## System Architecture
 
 ```

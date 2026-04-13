@@ -1,5 +1,8 @@
 # Resume File Upload Feature - Quick Start
 
+> Last Updated: April 13, 2026
+
+
 ## What's New? 🎉
 
 **Resume Studio now has a powerful file upload feature that lets users:**

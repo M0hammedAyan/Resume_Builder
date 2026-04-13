@@ -1,5 +1,8 @@
 # UI/UX Flow Comparison - Resume Studio Upgrade
 
+> Last Updated: April 13, 2026
+
+
 ## BEFORE: JD-Based Resume Generation
 
 ```

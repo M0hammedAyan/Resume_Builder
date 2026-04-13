@@ -1,5 +1,8 @@
 # Resume File Upload & Analysis Feature
 
+> Last Updated: April 13, 2026
+
+
 ## Overview
 
 Added a comprehensive file upload feature to Resume Studio that allows users to:

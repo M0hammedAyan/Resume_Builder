@@ -1,5 +1,8 @@
 # CareerOS API Testing Guide
 
+> Last Updated: April 13, 2026
+
+
 Complete testing documentation for all CareerOS endpoints including new Resume Chat and JD Analysis features.
 
 ## Quick Start

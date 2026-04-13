@@ -1,5 +1,8 @@
 # CareerOS - AI Resume Builder
 
+> Last Updated: April 13, 2026
+
+
 > A modern, AI-powered resume builder with conversational interface and professional templates.
 
 ![CareerOS Banner](./screenshots/banner.png)

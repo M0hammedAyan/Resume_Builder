@@ -1,5 +1,8 @@
 # Resume Studio Upgrade - Quick Start Guide
 
+> Last Updated: April 13, 2026
+
+
 ## 🎯 What Changed?
 
 ### **Resume Studio** (Chatbot Interface)

@@ -1,5 +1,8 @@
 # CareerOS - Startup-Grade Frontend Documentation
 
+> Last Updated: April 13, 2026
+
+
 ## Overview
 
 CareerOS is a modern, chat-first resume builder with a sophisticated template engine and AI-powered recruiting insights. The frontend is built with React, Vite, Tailwind CSS, Framer Motion, and Zustand.

@@ -1,5 +1,8 @@
 # Resume Studio Upgrade - Implementation Summary
 
+> Last Updated: April 13, 2026
+
+
 ## Overview
 Completely redesigned the Resume Studio page from a "Paste JD → Generate Resume" model to an **AI-powered chatbot-based resume builder**. Moved JD analysis features to a dedicated **Recruiter Lens** page.
 
