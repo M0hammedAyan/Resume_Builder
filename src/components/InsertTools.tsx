@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Table, PlusSquare } from "lucide-react";
 import { TableGridPicker } from "./TableGridPicker";
+import type { TableInsertOptions } from "../types/table";
 
 type InsertToolsProps = {
-  onInsertTable: (rows: number, cols: number) => void;
+  onInsertTable: (rows: number, cols: number, options?: Omit<TableInsertOptions, "rows" | "cols">) => void;
   onInsertPageBreak: () => void;
 };
 
@@ -24,7 +25,13 @@ export function InsertTools({ onInsertTable, onInsertPageBreak }: InsertToolsPro
           {showTablePicker && (
             <TableGridPicker
               onTableCreate={(rows, cols) => {
-                onInsertTable(rows, cols);
+                onInsertTable(rows, cols, {
+                  borderStyle: "full",
+                  borderWidth: 1,
+                  borderColor: "#333333",
+                  tableFill: "#ffffff",
+                  cellFill: "#ffffff",
+                });
                 setShowTablePicker(false);
               }}
               onClose={() => setShowTablePicker(false)}

@@ -5,7 +5,7 @@ type ResumeEditorProps = {
   editableHtml: string;
   pageColor: string;
   onSelectionUpdate: () => void;
-  onContentInput: (html: string) => void;
+  onContentInput: () => void;
   onSaveHistory: () => void;
 };
 
@@ -36,9 +36,8 @@ export function ResumeEditor({
       suppressContentEditableWarning
       onMouseUp={onSelectionUpdate}
       onKeyUp={onSelectionUpdate}
-      onInput={(e) => {
-        const html = (e.currentTarget as HTMLDivElement).innerHTML;
-        onContentInput(html);
+      onInput={() => {
+        onContentInput();
         onSaveHistory();
       }}
       dangerouslySetInnerHTML={{ __html: editableHtml }}

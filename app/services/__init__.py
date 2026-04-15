@@ -1,6 +1,7 @@
 from app.services.embedding_service import get_embedding
 from app.services.feedback_service import update_weights
 from app.services.pipeline_service import run_vector_selection_pipeline
+from app.services.recruiter_lens_service import RecruiterLensService
 from app.services.recruiter_simulator_service import simulate_recruiter_review
 from app.services.retrieval_service import get_similar_events
 from app.services.scoring_service import score_event
@@ -13,5 +14,6 @@ __all__ = [
 	"select_events",
 	"update_weights",
 	"simulate_recruiter_review",
+	"RecruiterLensService",
 	"run_vector_selection_pipeline",
 ]
