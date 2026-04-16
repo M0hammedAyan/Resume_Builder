@@ -5,14 +5,13 @@ import type { Editor } from "@tiptap/core";
 import { useCareerOSStore } from "../store/careeros.store";
 import { ResumeFileUpload } from "./ResumeFileUpload";
 import { apiService } from "../services/api";
-import type { ResumeSectionData } from "../types/resume";
 import { parseResumeFileLocally } from "../utils/localResumeParser";
 import { getAllTemplates, render_template, type TemplateId } from "../config/resume.templates";
 import { mapStoreResumeToTemplateData } from "../utils/templateResumeMapper";
 import { RichDocumentEditor } from "./editor/RichDocumentEditor";
 
 export function ResumeStudioView() {
-  const { resume, selectedTemplate, setSelectedTemplate, setResume } = useCareerOSStore();
+  const { user_id, resume, selectedTemplate, setSelectedTemplate, set_resume, update_resume } = useCareerOSStore();
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | undefined>(undefined);
   const [uploadSuccess, setUploadSuccess] = useState(false);
@@ -54,7 +53,23 @@ export function ResumeStudioView() {
 
   function addSectionTemplate(type: "experience" | "projects" | "skills" | "education" | "achievements") {
     console.log("Insert section:", type);
-    if (!editorInstance) return;
+    if (!editorInstance || !resume) return;
+
+    if (type === "experience") {
+      update_resume({ experience: [...resume.experience, "New experience bullet"] });
+    }
+    if (type === "projects") {
+      update_resume({ projects: [...resume.projects, "New project bullet"] });
+    }
+    if (type === "skills") {
+      update_resume({ skills: [...resume.skills, "New skill"] });
+    }
+    if (type === "education") {
+      update_resume({ education: [...resume.education, "New education entry"] });
+    }
+    if (type === "achievements") {
+      update_resume({ achievements: [...resume.achievements, "New achievement"] });
+    }
 
     editorInstance
       .chain()
@@ -72,40 +87,24 @@ export function ResumeStudioView() {
     setUploadSuccess(false);
 
     try {
-      const userId = "00000000-0000-0000-0000-000000000001";
-      const uploadResult = await apiService.uploadResumeFile(userId, file);
-      const parsed = uploadResult.parseResult;
+      const uploadResult = await apiService.uploadResumeFile(user_id, file);
+      const parsed = uploadResult.parse_result;
 
-      const mkBullets = (
-        section: "experience" | "projects" | "skills" | "education" | "achievements",
-        items: string[],
-      ) =>
-        items.map((content, index) => ({
-          id: `${section}-${index}-${Date.now()}`,
-          section,
-          content,
-          createdAt: new Date().toISOString(),
-        }));
-
-      const sections: ResumeSectionData[] = [
-        { section: "experience", title: "Experience", bullets: mkBullets("experience", parsed.experience ?? []) },
-        { section: "projects", title: "Projects", bullets: mkBullets("projects", parsed.projects ?? []) },
-        { section: "skills", title: "Skills", bullets: mkBullets("skills", parsed.skills ?? []) },
-        { section: "education", title: "Education", bullets: mkBullets("education", parsed.education ?? []) },
-        { section: "achievements", title: "Achievements", bullets: [] },
-      ];
-
-      setResume({
-        id: uploadResult.resumeId || `uploaded-${Date.now()}`,
-        header: {
-          name: parsed.name || "Uploaded Candidate",
+      set_resume({
+        id: uploadResult.resume_id || `uploaded-${Date.now()}`,
+        personal: {
+          name: parsed.name || "",
           title: "",
           email: parsed.email || "",
           phone: parsed.phone || "",
           location: "",
         },
         summary: parsed.summary || "",
-        sections,
+        experience: parsed.experience ?? [],
+        projects: parsed.projects ?? [],
+        skills: parsed.skills ?? [],
+        education: parsed.education ?? [],
+        achievements: [],
       });
 
       setUploadSuccess(true);
@@ -113,36 +112,21 @@ export function ResumeStudioView() {
       try {
         const parsed = await parseResumeFileLocally(file);
 
-        const mkBullets = (
-          section: "experience" | "projects" | "skills" | "education" | "achievements",
-          items: string[],
-        ) =>
-          items.map((content, index) => ({
-            id: `${section}-${index}-${Date.now()}`,
-            section,
-            content,
-            createdAt: new Date().toISOString(),
-          }));
-
-        const sections: ResumeSectionData[] = [
-          { section: "experience", title: "Experience", bullets: mkBullets("experience", parsed.experience ?? []) },
-          { section: "projects", title: "Projects", bullets: mkBullets("projects", parsed.projects ?? []) },
-          { section: "skills", title: "Skills", bullets: mkBullets("skills", parsed.skills ?? []) },
-          { section: "education", title: "Education", bullets: mkBullets("education", parsed.education ?? []) },
-          { section: "achievements", title: "Achievements", bullets: [] },
-        ];
-
-        setResume({
+        set_resume({
           id: `local-${Date.now()}`,
-          header: {
-            name: parsed.name || "Uploaded Candidate",
+          personal: {
+            name: parsed.name || "",
             title: "",
             email: parsed.email || "",
             phone: parsed.phone || "",
             location: "",
           },
           summary: parsed.summary || "",
-          sections,
+          experience: parsed.experience ?? [],
+          projects: parsed.projects ?? [],
+          skills: parsed.skills ?? [],
+          education: parsed.education ?? [],
+          achievements: [],
         });
 
         setUploadSuccess(true);
@@ -198,6 +182,24 @@ export function ResumeStudioView() {
               <button onClick={() => addSectionTemplate("skills")} className="rounded bg-slate-700 px-2 py-1 text-left text-xs">+ Skills</button>
               <button onClick={() => addSectionTemplate("education")} className="rounded bg-slate-700 px-2 py-1 text-left text-xs">+ Education</button>
               <button onClick={() => addSectionTemplate("achievements")} className="rounded bg-slate-700 px-2 py-1 text-left text-xs">+ Achievements</button>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-slate-700 bg-slate-600/40 p-3">
+            <h3 className="mb-2 text-sm font-semibold text-slate-100">Resume Data</h3>
+            <div className="grid gap-2 text-xs text-slate-200">
+              <input
+                value={resume.personal.name}
+                onChange={(e) => update_resume({ personal: { ...resume.personal, name: e.target.value } })}
+                className="rounded bg-slate-800 px-2 py-1"
+                placeholder="Full name"
+              />
+              <input
+                value={resume.summary}
+                onChange={(e) => update_resume({ summary: e.target.value })}
+                className="rounded bg-slate-800 px-2 py-1"
+                placeholder="Summary"
+              />
             </div>
           </div>
 

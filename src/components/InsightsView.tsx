@@ -1,27 +1,66 @@
 import { motion } from "framer-motion";
-import { TrendingUp, BarChart3, Target, Lightbulb } from "lucide-react";
+import { BarChart3, Lightbulb, Target, TrendingUp } from "lucide-react";
+import { useEffect, useState } from "react";
+import { apiService } from "../services/api";
+import { useCareerOSStore } from "../store/careeros.store";
+import type { ResumeInsightsAnalysis } from "../types/app";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 export function InsightsView() {
-  // These would come from the backend/store in a real application
-  const insights = {
-    growthTrend: "increasing" as const,
-    strengthAreas: [
-      "Leadership & Team Management",
-      "Full-stack Development",
-      "Project Delivery",
-    ],
-    weakAreas: [
-      "Limited cloud infrastructure experience",
-      "Few certifications",
-      "Emerging tech adoption",
-    ],
-    recommendations: [
-      "Pursue AWS Solutions Architect certification",
-      "Document recent DevOps improvements",
-      "Highlight leadership impact with metrics",
-      "Build projects with modern frameworks",
-    ],
+  const { resume } = useCareerOSStore();
+  const [insights, setInsights] = useState<ResumeInsightsAnalysis | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const hasResumeData = !!resume && (
+    resume.summary.trim().length > 0 ||
+    resume.skills.length > 0 ||
+    resume.experience.length > 0 ||
+    resume.projects.length > 0 ||
+    resume.education.length > 0 ||
+    resume.achievements.length > 0
+  );
+
+  const chartData = insights
+    ? Object.entries(insights.skill_distribution)
+        .map(([skill, count]) => ({ skill, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10)
+    : [];
+
+  const fetchInsights = async () => {
+    if (!resume || !hasResumeData) {
+      setInsights(null);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await apiService.getInsights({
+        resume_data: resume as unknown as Record<string, unknown>,
+      });
+      console.log("Insights response:", response);
+      setInsights(response);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load insights");
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    fetchInsights();
+  }, [resume]);
 
   return (
     <div className="space-y-6">
@@ -37,25 +76,84 @@ export function InsightsView() {
         </p>
       </motion.div>
 
-      {/* Growth Trend */}
+      {!hasResumeData && (
+        <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-6 text-sm text-slate-300">
+          Upload or create a resume to see insights
+        </div>
+      )}
+
+      {loading && (
+        <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-6 text-sm text-slate-300">
+          Loading insights...
+        </div>
+      )}
+
+      {error && (
+        <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-6 text-sm text-red-300">
+          {error}
+        </div>
+      )}
+
+      {!loading && !error && hasResumeData && !insights && (
+        <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-6 text-sm text-slate-300">
+          No insights available.
+        </div>
+      )}
+
+      {!insights ? null : (
+        <>
+
+      {/* Metrics */}
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.3 }}
         className="rounded-lg border border-slate-800 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 p-6"
       >
-        <div className="flex items-center gap-4">
-          <div className="rounded-lg bg-emerald-500/20 p-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="flex items-center gap-3 rounded-lg border border-slate-800 bg-slate-900/50 p-4">
             <TrendingUp className="h-6 w-6 text-emerald-400" />
+            <div>
+              <p className="text-xs text-slate-400">Resume Score</p>
+              <p className="text-2xl font-bold text-slate-100">{insights.resume_score}</p>
+            </div>
           </div>
-          <div>
-            <h3 className="font-semibold text-slate-100">Career Growth Trend</h3>
-            <p className="mt-1 text-sm text-slate-400">
-              Your professional profile is showing steady growth with consistent
-              skill expansion and impact metrics.
-            </p>
+          <div className="flex items-center gap-3 rounded-lg border border-slate-800 bg-slate-900/50 p-4">
+            <BarChart3 className="h-6 w-6 text-cyan-400" />
+            <div>
+              <p className="text-xs text-slate-400">Experience Level</p>
+              <p className="text-2xl font-bold text-slate-100">{insights.experience_level}</p>
+            </div>
           </div>
         </div>
+      </motion.div>
+
+      {/* Skill Distribution Chart */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.1 }}
+        className="rounded-lg border border-slate-800 bg-slate-900/50 p-6"
+      >
+        <h3 className="mb-3 font-semibold text-slate-100">Skill Distribution</h3>
+        {chartData.length === 0 ? (
+          <p className="text-sm text-slate-400">No skill frequency data available.</p>
+        ) : (
+          <div className="h-72 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                <XAxis dataKey="skill" tick={{ fill: "#cbd5e1", fontSize: 12 }} interval={0} angle={-20} textAnchor="end" height={60} />
+                <YAxis tick={{ fill: "#cbd5e1", fontSize: 12 }} allowDecimals={false} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: "#0f172a", border: "1px solid #334155", color: "#e2e8f0" }}
+                  labelStyle={{ color: "#e2e8f0" }}
+                />
+                <Bar dataKey="count" fill="#22d3ee" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </motion.div>
 
       {/* Grid Layout */}
@@ -74,7 +172,7 @@ export function InsightsView() {
             <h3 className="font-semibold text-slate-100">Strength Areas</h3>
           </div>
           <ul className="space-y-3">
-            {insights.strengthAreas.map((area, index) => (
+            {insights.strength_areas.map((area, index) => (
               <motion.li
                 key={index}
                 initial={{ opacity: 0, x: -10 }}
@@ -103,7 +201,7 @@ export function InsightsView() {
             <h3 className="font-semibold text-slate-100">Areas to Develop</h3>
           </div>
           <ul className="space-y-3">
-            {insights.weakAreas.map((area, index) => (
+            {insights.weak_areas.map((area, index) => (
               <motion.li
                 key={index}
                 initial={{ opacity: 0, x: 10 }}
@@ -147,33 +245,8 @@ export function InsightsView() {
         </div>
       </motion.div>
 
-      {/* Next Steps */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: 0.3 }}
-        className="rounded-lg border border-slate-800 bg-slate-900/50 p-6"
-      >
-        <h3 className="font-semibold text-slate-100 mb-3">Suggested Next Steps</h3>
-        <ol className="space-y-2 text-sm text-slate-300">
-          <li className="flex gap-3">
-            <span className="font-semibold text-cyan-400">1.</span>
-            <span>Visit Resume Studio and select the Professional Classic template</span>
-          </li>
-          <li className="flex gap-3">
-            <span className="font-semibold text-cyan-400">2.</span>
-            <span>Use Chat to refine your achievement descriptions with metrics</span>
-          </li>
-          <li className="flex gap-3">
-            <span className="font-semibold text-cyan-400">3.</span>
-            <span>Check your resume against target jobs in Recruiter Lens</span>
-          </li>
-          <li className="flex gap-3">
-            <span className="font-semibold text-cyan-400">4.</span>
-            <span>Download your resume and apply to roles</span>
-          </li>
-        </ol>
-      </motion.div>
+        </>
+      )}
     </div>
   );
 }

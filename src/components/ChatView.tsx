@@ -2,16 +2,83 @@ import { motion } from "framer-motion";
 import { Send, Sparkles } from "lucide-react";
 import { useCareerOSStore } from "../store/careeros.store";
 import { useState } from "react";
-import type { ChatMessage } from "../types/resume";
+import type { ChatMessage, ResumeAssistantAction } from "../types/resume";
+import type { ResumeData } from "../store/careeros.store";
+import { apiService } from "../services/api";
+
+function applyActions(
+  actions: ResumeAssistantAction[],
+  resumeState: ResumeData,
+  setResume: (resume: ResumeData) => void,
+) {
+  let updated: ResumeData = {
+    ...resumeState,
+    personal: { ...resumeState.personal },
+    skills: [...resumeState.skills],
+    experience: [...resumeState.experience],
+    projects: [...resumeState.projects],
+    education: [...resumeState.education],
+    achievements: [...resumeState.achievements],
+  };
+
+  actions.forEach((action) => {
+    switch (action.type) {
+      case "add_section": {
+        if (!action.section) break;
+        const key = action.section as keyof ResumeData;
+        const current = updated[key];
+        if (Array.isArray(current) && action.content && !current.includes(action.content)) {
+          current.push(action.content);
+        }
+        break;
+      }
+      case "update_skills": {
+        updated.skills = Array.from(new Set([...(updated.skills ?? []), ...(action.skills ?? [])]));
+        break;
+      }
+      case "add_project": {
+        if (action.content) {
+          updated.projects = [...updated.projects, action.content];
+        }
+        break;
+      }
+      case "rewrite_bullet": {
+        if (!action.section || !action.content) break;
+        const key = action.section as keyof ResumeData;
+        const current = updated[key];
+        if (Array.isArray(current) && current.length > 0) {
+          current[0] = action.content;
+        } else if (Array.isArray(current)) {
+          current.push(action.content);
+        }
+        break;
+      }
+      case "update_summary": {
+        if (action.content) {
+          updated.summary = action.content;
+        }
+        break;
+      }
+      default: {
+        console.warn("Unknown action:", action);
+      }
+    }
+  });
+
+  setResume(updated);
+}
 
 export function ChatView() {
-  const { chatMessages, addChatMessage } = useCareerOSStore();
+  const { chatMessages, addChatMessage, resume, set_resume, jobDescription } = useCareerOSStore();
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() || !resume) return;
+
+    setError(null);
 
     // Add user message
     const userMessage = {
@@ -26,27 +93,28 @@ export function ChatView() {
     setIsLoading(true);
 
     try {
-      // Mock API call - replace with your actual endpoint
-      const response = await new Promise((resolve) => {
-        setTimeout(() => {
-          resolve({
-            data: {
-              response: `Great! I've noted your update: "${input}". This could be a strong addition to your experience section. Would you like me to refine this further or explore related opportunities?`,
-            },
-          });
-        }, 1000);
+      const response = await apiService.getResumeAssistantActions({
+        user_prompt: input,
+        resume_data: resume as unknown as Record<string, unknown>,
+        job_description: jobDescription,
+        uploaded_files_text: "",
       });
+      console.log("Gemini response:", response);
+
+      applyActions(response.actions, resume, set_resume);
+
+      const primaryReply = response.suggestions.join("\n");
 
       const assistantMessage = {
         id: (Date.now() + 1).toString(),
         role: "assistant" as const,
-        content: (response as any).data.response,
+        content: primaryReply,
         timestamp: new Date().toISOString(),
       };
 
       addChatMessage(assistantMessage);
-    } catch (error) {
-      console.error("Error sending message:", error);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to fetch assistant response");
     } finally {
       setIsLoading(false);
     }
@@ -128,6 +196,11 @@ export function ChatView() {
                   </div>
                 </div>
               </motion.div>
+            )}
+            {error && (
+              <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+                {error}
+              </div>
             )}
           </div>
         )}

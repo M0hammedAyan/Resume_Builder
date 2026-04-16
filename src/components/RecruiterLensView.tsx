@@ -2,36 +2,49 @@ import { motion } from "framer-motion";
 import { CheckCircle2, AlertCircle, Lightbulb, Zap } from "lucide-react";
 import { useCareerOSStore } from "../store/careeros.store";
 import { useState } from "react";
+import { apiService } from "../services/api";
+
+type RecruiterLensUiResult = {
+  score: number;
+  matchedSkills: string[];
+  missingSkills: string[];
+  suggestions: string[];
+};
 
 export function RecruiterLensView() {
-  const { jobDescription, setJobDescription, jobMatchAnalysis, setJobMatchAnalysis, resume } = useCareerOSStore();
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const { jobDescription, setJobDescription, resume } = useCareerOSStore();
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<RecruiterLensUiResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleAnalyze = async () => {
     if (!jobDescription.trim() || !resume) return;
-    setIsAnalyzing(true);
+    setLoading(true);
+    setError(null);
 
     try {
-      // Mock analysis - replace with actual API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const response = await apiService.recruiterLensAnalyze({
+        resume_data: resume as unknown as Record<string, unknown>,
+        job_description: jobDescription,
+      });
 
-      const mockAnalysis = {
-        matchScore: 78,
-        matchedSkills: ["React", "TypeScript", "Node.js", "AWS", "Docker"],
-        missingSkills: ["Kubernetes", "GraphQL", "Python"],
-        weakAreas: ["Limited DevOps experience", "Few cloud certifications"],
-        suggestions: [
-          "Highlight AWS projects more prominently",
-          "Add a section about infrastructure improvements",
-          "Consider learning Kubernetes",
-        ],
-      };
+      console.log("Recruiter Lens response:", response);
 
-      setJobMatchAnalysis(mockAnalysis);
-    } catch (error) {
-      console.error("Error analyzing:", error);
+      const rawScore = Number(response.score ?? 0);
+      const normalizedScore = rawScore <= 1 ? Math.round(rawScore * 100) : Math.round(rawScore);
+      const matchedSkills = (response.match_details?.required_pairs ?? []).map((pair) => pair.jd_skill);
+
+      setResult({
+        score: normalizedScore,
+        matchedSkills: Array.from(new Set(matchedSkills)),
+        missingSkills: response.missing_skills ?? [],
+        suggestions: response.suggestions ?? [],
+      });
+    } catch (err) {
+      setResult(null);
+      setError(err instanceof Error ? err.message : "Analysis failed");
     } finally {
-      setIsAnalyzing(false);
+      setLoading(false);
     }
   };
 
@@ -54,10 +67,10 @@ export function RecruiterLensView() {
           />
           <button
             onClick={handleAnalyze}
-            disabled={isAnalyzing || !jobDescription.trim()}
+            disabled={loading || !jobDescription.trim()}
             className="mt-3 w-full rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 font-medium text-white transition hover:shadow-lg hover:shadow-cyan-500/50 disabled:opacity-50"
           >
-            {isAnalyzing ? "Analyzing..." : "Check Fit"}
+            {loading ? "Analyzing..." : "Check Fit"}
           </button>
         </div>
       </motion.div>
@@ -69,7 +82,7 @@ export function RecruiterLensView() {
         transition={{ duration: 0.4, delay: 0.1 }}
         className="lg:col-span-2 flex-1"
       >
-        {!jobMatchAnalysis ? (
+        {!result ? (
           <div className="h-full flex items-center justify-center rounded-lg border border-slate-800 border-dashed bg-slate-900/20">
             <div className="text-center">
               <Zap className="h-12 w-12 text-slate-600 mx-auto mb-3" />
@@ -78,6 +91,11 @@ export function RecruiterLensView() {
           </div>
         ) : (
           <div className="space-y-4 overflow-y-auto h-full pr-2">
+            {error && (
+              <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300">
+                {error}
+              </div>
+            )}
             {/* Match Score */}
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
@@ -88,18 +106,18 @@ export function RecruiterLensView() {
               <div className="text-center">
                 <div className="inline-flex items-center justify-center h-24 w-24 rounded-full border-4 border-cyan-500 bg-slate-900/70 mb-3">
                   <span className="text-4xl font-bold text-cyan-400">
-                    {jobMatchAnalysis.matchScore}%
+                    {result.score}%
                   </span>
                 </div>
                 <h3 className="text-lg font-semibold text-slate-100">Match Score</h3>
                 <p className="mt-1 text-sm text-slate-400">
-                  You're a {jobMatchAnalysis.matchScore > 75 ? "strong" : "potential"} fit for this role
+                  You're a {result.score > 75 ? "strong" : "potential"} fit for this role
                 </p>
               </div>
             </motion.div>
 
             {/* Matched Skills */}
-            {jobMatchAnalysis.matchedSkills.length > 0 && (
+            {result.matchedSkills.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -111,7 +129,7 @@ export function RecruiterLensView() {
                   <h4 className="font-semibold text-slate-100">Matched Skills</h4>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {jobMatchAnalysis.matchedSkills.map((skill) => (
+                  {result.matchedSkills.map((skill) => (
                     <span
                       key={skill}
                       className="px-3 py-1 rounded-full bg-green-500/20 text-green-300 text-sm"
@@ -124,7 +142,7 @@ export function RecruiterLensView() {
             )}
 
             {/* Missing Skills */}
-            {jobMatchAnalysis.missingSkills.length > 0 && (
+            {result.missingSkills.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -136,7 +154,7 @@ export function RecruiterLensView() {
                   <h4 className="font-semibold text-slate-100">Missing Skills</h4>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {jobMatchAnalysis.missingSkills.map((skill) => (
+                  {result.missingSkills.map((skill) => (
                     <span
                       key={skill}
                       className="px-3 py-1 rounded-full bg-yellow-500/20 text-yellow-300 text-sm"
@@ -148,32 +166,12 @@ export function RecruiterLensView() {
               </motion.div>
             )}
 
-            {/* Weak Areas */}
-            {jobMatchAnalysis.weakAreas.length > 0 && (
+            {/* Suggestions */}
+            {result.suggestions.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: 0.3 }}
-                className="rounded-lg border border-slate-800 bg-slate-900/50 p-4"
-              >
-                <h4 className="font-semibold text-slate-100 mb-3">Areas to Develop</h4>
-                <ul className="space-y-2">
-                  {jobMatchAnalysis.weakAreas.map((area) => (
-                    <li key={area} className="flex gap-2 text-sm text-slate-300">
-                      <span className="text-blue-400 mt-1">→</span>
-                      {area}
-                    </li>
-                  ))}
-                </ul>
-              </motion.div>
-            )}
-
-            {/* Suggestions */}
-            {jobMatchAnalysis.suggestions.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: 0.4 }}
                 className="rounded-lg border border-slate-800 bg-gradient-to-br from-purple-500/10 to-pink-500/10 p-4"
               >
                 <div className="flex items-center gap-2 mb-3">
@@ -181,7 +179,7 @@ export function RecruiterLensView() {
                   <h4 className="font-semibold text-slate-100">Suggestions</h4>
                 </div>
                 <ul className="space-y-2">
-                  {jobMatchAnalysis.suggestions.map((suggestion) => (
+                  {result.suggestions.map((suggestion) => (
                     <li key={suggestion} className="flex gap-2 text-sm text-slate-300">
                       <span className="text-purple-400 mt-1">✨</span>
                       {suggestion}

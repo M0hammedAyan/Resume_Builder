@@ -17,11 +17,11 @@ export interface ResumeSectionData {
 
 export interface Resume {
   id: string;
-  userId: string;
+  user_id: string;
   title: string;
   sections: ResumeSectionData[];
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
 }
 
 // Chat interaction
@@ -38,33 +38,33 @@ export interface ChatMessage {
 }
 
 export interface ChatBotRequest {
-  userId: string;
-  userInput: string;
-  resumeId: string;
+  user_id: string;
+  user_input: string;
+  resume_id: string;
   context?: string;
 }
 
 export interface ChatBotResponse {
   response: string;
-  generatedBullet?: {
+  generated_bullet?: {
     section: ResumeSection;
     content: string;
   };
-  followUpQuestions: string[];
+  follow_up_questions: string[];
   confidence: number;
 }
 
 // JD Analysis
 export interface JDAnalysisRequest {
-  userId: string;
-  jobDescription: string;
-  resumeId?: string;
+  user_id: string;
+  job_description: string;
+  resume_id?: string;
 }
 
 export interface JDEligibilityResult {
-  eligibilityScore: number; // 0-100
-  matchedSkills: string[];
-  missingSkills: string[];
+  eligibility_score: number; // 0-100
+  matched_skills: string[];
+  missing_skills: string[];
   improvements: string[];
   summary: string;
 }
@@ -79,18 +79,18 @@ export interface ResumeParseResult {
   projects: string[];
   skills: string[];
   education: string[];
-  rawText: string;
+  raw_text: string;
 }
 
 export interface ResumeUploadResponse {
-  parseResult: ResumeParseResult;
-  resumeId: string;
+  parse_result: ResumeParseResult;
+  resume_id: string;
 }
 
 export interface ResumeAnalysisRequest {
-  userId: string;
-  resumeContent: ResumeParseResult;
-  targetJobDescription?: string;
+  user_id: string;
+  resume_content: ResumeParseResult;
+  target_job_description?: string;
 }
 
 export interface ResumeImprovementSuggestion {
@@ -102,9 +102,38 @@ export interface ResumeImprovementSuggestion {
 }
 
 export interface ResumeAnalysisResult {
-  overallScore: number; // 0-100
-  strengthAreas: string[];
-  improvementAreas: string[];
+  overall_score: number; // 0-100
+  strength_areas: string[];
+  improvement_areas: string[];
   suggestions: ResumeImprovementSuggestion[];
   summary: string;
+}
+
+export type ResumeActionType =
+  | "add_section"
+  | "remove_section"
+  | "reorder_sections"
+  | "update_skills"
+  | "add_project"
+  | "rewrite_bullet"
+  | "update_summary"
+  | "design_recommendation";
+
+export interface ResumeAssistantAction {
+  type: ResumeActionType;
+  section?: string;
+  content?: string;
+  skills?: string[];
+  order?: string[];
+  metadata?: Record<string, unknown>;
+}
+
+export interface ResumeAssistantResponse {
+  suggestions: string[];
+  missing_sections: string[];
+  skills_to_add: string[];
+  skills_to_remove: string[];
+  design_suggestions: string[];
+  actions: ResumeAssistantAction[];
+  model: string;
 }

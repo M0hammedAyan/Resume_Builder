@@ -1,5 +1,5 @@
 """Schemas for resume chat and JD analysis."""
-from typing import Optional
+from typing import Any, Literal, Optional
 from pydantic import BaseModel
 
 
@@ -50,3 +50,44 @@ class JDFeedbackIn(BaseModel):
 class JDFeedbackOut(BaseModel):
     """Response with improvement feedback."""
     feedback: list[str]
+
+
+class ResumeAssistantAction(BaseModel):
+    """A structured action that frontend can apply to the editor state."""
+
+    type: Literal[
+        "add_section",
+        "remove_section",
+        "reorder_sections",
+        "update_skills",
+        "add_project",
+        "rewrite_bullet",
+        "update_summary",
+        "design_recommendation",
+    ]
+    section: Optional[str] = None
+    content: Optional[str] = None
+    skills: Optional[list[str]] = None
+    order: Optional[list[str]] = None
+    metadata: Optional[dict[str, Any]] = None
+
+
+class ResumeAssistantIn(BaseModel):
+    """Structured input sent to Gemini for resume assistant actions."""
+
+    user_prompt: str
+    resume_data: dict[str, Any]
+    job_description: str = ""
+    uploaded_files_text: str = ""
+
+
+class ResumeAssistantOut(BaseModel):
+    """Structured assistant output consumed by frontend action executor."""
+
+    suggestions: list[str]
+    missing_sections: list[str]
+    skills_to_add: list[str]
+    skills_to_remove: list[str]
+    design_suggestions: list[str]
+    actions: list[ResumeAssistantAction]
+    model: str

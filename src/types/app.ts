@@ -48,6 +48,15 @@ export interface CareerInsights {
   recommendations: string[];
 }
 
+export interface ResumeInsightsAnalysis {
+  skill_distribution: Record<string, number>;
+  strength_areas: string[];
+  weak_areas: string[];
+  experience_level: number;
+  resume_score: number;
+  recommendations: string[];
+}
+
 export interface JobMatchResult {
   match_score: number;
   matched_skills: string[];

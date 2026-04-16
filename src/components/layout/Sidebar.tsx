@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { MessageSquare, FileText, Eye } from "lucide-react";
+import { MessageSquare, FileText, Eye, LayoutTemplate, LineChart } from "lucide-react";
 import { useCareerOSStore } from "../../store/careeros.store";
 
 const items: Array<{
@@ -25,6 +25,18 @@ const items: Array<{
     label: "Recruiter Lens",
     caption: "Job matching",
     icon: <Eye className="h-4 w-4" />,
+  },
+  {
+    id: "templates",
+    label: "Templates",
+    caption: "Browse layouts",
+    icon: <LayoutTemplate className="h-4 w-4" />,
+  },
+  {
+    id: "insights",
+    label: "Insights",
+    caption: "Growth metrics",
+    icon: <LineChart className="h-4 w-4" />,
   },
 ];
 

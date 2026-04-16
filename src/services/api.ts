@@ -1,8 +1,8 @@
 import axios from "axios";
 import type {
-  CareerInsights,
   JobMatchResult,
   RecruiterResult,
+  ResumeInsightsAnalysis,
   ResumeGenerateResponse,
   ResumeVersion,
   ResumeVersionCompare,
@@ -16,6 +16,7 @@ import type {
   ResumeUploadResponse,
   ResumeAnalysisRequest,
   ResumeAnalysisResult,
+  ResumeAssistantResponse,
 } from "../types/resume";
 
 const api = axios.create({
@@ -57,9 +58,60 @@ export const apiService = {
     return response.data;
   },
 
-  async getInsights(userId: string, useLlm = false) {
-    const response = await api.get<CareerInsights>("/insights", {
-      params: { user_id: userId, use_llm: useLlm },
+  async recruiterLensAnalyze(payload: {
+    resume_data: Record<string, unknown>;
+    job_description: string;
+  }) {
+    const stringifyList = (value: unknown): string[] => {
+      if (!Array.isArray(value)) return [];
+      return value.map((item) => String(item)).filter((item) => item.trim().length > 0);
+    };
+
+    const personal =
+      payload.resume_data.personal && typeof payload.resume_data.personal === "object"
+        ? (payload.resume_data.personal as Record<string, unknown>)
+        : {};
+
+    const resumeText = [
+      String(personal.name ?? ""),
+      String(payload.resume_data.summary ?? ""),
+      ...stringifyList(payload.resume_data.experience),
+      ...stringifyList(payload.resume_data.projects),
+      ...stringifyList(payload.resume_data.skills),
+      ...stringifyList(payload.resume_data.education),
+      ...stringifyList(payload.resume_data.achievements),
+    ]
+      .filter((line) => line.trim().length > 0)
+      .join("\n");
+
+    const formData = new FormData();
+    const file = new File([resumeText], "resume.txt", { type: "text/plain" });
+    formData.append("file", file);
+    formData.append("job_description", payload.job_description);
+
+    const response = await api.post<{
+      score: number;
+      missing_skills: string[];
+      suggestions: string[];
+      match_details?: {
+        required_pairs?: Array<{ jd_skill: string; resume_skill: string; similarity: number }>;
+      };
+    }>("/recruiter/lens-analyze", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    return response.data;
+  },
+
+  async getInsights(payload: {
+    resume_data: Record<string, unknown>;
+    use_llm?: boolean;
+  }) {
+    const response = await api.post<ResumeInsightsAnalysis>("/insights/analyze", {
+      resume_data: payload.resume_data,
+      use_llm: payload.use_llm ?? true,
     });
     return response.data;
   },
@@ -69,16 +121,16 @@ export const apiService = {
     return response.data;
   },
 
-  async getSkillGap(userId: string, jobDescription: string) {
+  async getSkillGap(user_id: string, job_description: string) {
     const response = await api.get<SkillGapResult>("/skill-gap", {
-      params: { user_id: userId, job_description: jobDescription },
+      params: { user_id, job_description },
     });
     return response.data;
   },
 
-  async getResumeVersions(userId: string, limit = 10) {
+  async getResumeVersions(user_id: string, limit = 10) {
     const response = await api.get<{ versions: ResumeVersion[] }>("/resume/versions", {
-      params: { user_id: userId, limit },
+      params: { user_id, limit },
     });
     return response.data.versions;
   },
@@ -90,12 +142,12 @@ export const apiService = {
     return response.data;
   },
 
-  getDownloadPdfUrl(userId: string, template: string) {
-    return `${api.defaults.baseURL}/resume/download/pdf?user_id=${encodeURIComponent(userId)}&template=${encodeURIComponent(template)}`;
+  getDownloadPdfUrl(user_id: string, template: string) {
+    return `${api.defaults.baseURL}/resume/download/pdf?user_id=${encodeURIComponent(user_id)}&template=${encodeURIComponent(template)}`;
   },
 
-  getDownloadDocxUrl(userId: string, template: string) {
-    return `${api.defaults.baseURL}/resume/download/docx?user_id=${encodeURIComponent(userId)}&template=${encodeURIComponent(template)}`;
+  getDownloadDocxUrl(user_id: string, template: string) {
+    return `${api.defaults.baseURL}/resume/download/docx?user_id=${encodeURIComponent(user_id)}&template=${encodeURIComponent(template)}`;
   },
 
   // New Resume Builder Chat APIs
@@ -109,19 +161,19 @@ export const apiService = {
     return response.data;
   },
 
-  async getJDFeedback(userId: string, jobDescription: string) {
+  async getJDFeedback(user_id: string, job_description: string) {
     const response = await api.post<{ feedback: string[] }>("/resume/jd-feedback", {
-      user_id: userId,
-      job_description: jobDescription,
+      user_id,
+      job_description,
     });
     return response.data.feedback;
   },
 
   // Resume File Upload & Analysis APIs
-  async uploadResumeFile(userId: string, file: File) {
+  async uploadResumeFile(user_id: string, file: File) {
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("user_id", userId);
+    formData.append("user_id", user_id);
 
     const response = await api.post<ResumeUploadResponse>("/resume/upload", formData, {
       headers: {
@@ -134,5 +186,39 @@ export const apiService = {
   async analyzeResumeAndImprove(payload: ResumeAnalysisRequest) {
     const response = await api.post<ResumeAnalysisResult>("/resume/analyze-improve", payload);
     return response.data;
+  },
+
+  async getResumeAssistantActions(payload: {
+    user_prompt: string;
+    resume_data: Record<string, unknown>;
+    job_description?: string;
+    uploaded_files_text?: string;
+    files?: File[];
+  }) {
+    const formData = new FormData();
+    formData.append("user_prompt", payload.user_prompt);
+    formData.append("resume_data", JSON.stringify(payload.resume_data));
+    formData.append("job_description", payload.job_description ?? "");
+    formData.append("uploaded_files_text", payload.uploaded_files_text ?? "");
+
+    for (const file of payload.files ?? []) {
+      formData.append("files", file);
+    }
+
+    const response = await api.post<{
+      suggestions: string[];
+      missing_sections: string[];
+      skills_to_add: string[];
+      skills_to_remove: string[];
+      design_suggestions: string[];
+      actions: ResumeAssistantResponse["actions"];
+      model: string;
+    }>("/resume/generate-assistant-actions", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    return response.data as ResumeAssistantResponse;
   },
 };

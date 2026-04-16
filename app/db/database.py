@@ -9,12 +9,12 @@ from sqlalchemy import Column, DateTime, Float, String, Text, UniqueConstraint, 
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 BASE_DIR = Path(__file__).resolve().parents[2]
-DATABASE_URL = os.getenv("CAREEROS_DATABASE_URL", f"sqlite:///{BASE_DIR / 'careeros.db'}")
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {},
-)
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL environment variable is required")
+
+engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 

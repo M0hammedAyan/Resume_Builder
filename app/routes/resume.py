@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import json
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.crud.auth import get_user_by_id
+from app.crud.storage import create_chat_turn, create_resume, create_resume_version, create_uploaded_file, get_resume
 from app.models.generated_output import GeneratedOutput
 from app.models.structured_event import StructuredEvent
 from app.schemas.resume import (
@@ -22,12 +25,13 @@ from app.schemas.resume_chat import (
     JDEligibilityOut,
     JDFeedbackIn,
     JDFeedbackOut,
+    ResumeAssistantOut,
 )
-from fastapi import UploadFile, File, Form
-import uuid
 
 from app.services.pipeline_service import run_vector_selection_pipeline
 from app.services.resume_chat_service import ResumeChatService, JDAnalysisService
+from app.services.gemini_resume_assistant_service import GeminiResumeAssistantService
+from app.services.uploaded_file_text_service import UploadedFileTextService
 from app.services.resume_parsing_service import ResumeParsingService, ResumeAnalysisService
 from app.schemas.resume_upload import (
     ResumeUploadOut,
@@ -37,6 +41,76 @@ from app.schemas.resume_upload import (
 )
 
 router = APIRouter(tags=["resume"])
+
+
+@router.post("/resume/generate-assistant-actions", response_model=ResumeAssistantOut)
+async def generate_resume_assistant_actions(
+    user_prompt: str = Form(...),
+    resume_data: str = Form(...),
+    job_description: str = Form(""),
+    uploaded_files_text: str = Form(""),
+    files: list[UploadFile] = File(default=[]),
+) -> ResumeAssistantOut:
+    """Generate structured resume editing actions using Gemini."""
+    try:
+        try:
+            parsed_resume_data = json.loads(resume_data)
+        except json.JSONDecodeError as exc:
+            raise HTTPException(status_code=400, detail="resume_data must be valid JSON") from exc
+
+        if not isinstance(parsed_resume_data, dict):
+            raise HTTPException(status_code=400, detail="resume_data must be a JSON object")
+
+        extracted_chunks: list[str] = []
+        extractor = UploadedFileTextService()
+
+        for upload in files:
+            file_content = await upload.read()
+            if not file_content:
+                continue
+
+            filename = upload.filename or "uploaded_document"
+            try:
+                text = extractor.extract_text(file_content, filename)
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+            if text.strip():
+                extracted_chunks.append(f"File: {filename}\n{text.strip()}")
+
+        merged_uploaded_text = uploaded_files_text.strip()
+        if extracted_chunks:
+            files_text = "\n\n".join(extracted_chunks)
+            merged_uploaded_text = (
+                f"{merged_uploaded_text}\n\n{files_text}" if merged_uploaded_text else files_text
+            )
+
+        service = GeminiResumeAssistantService()
+        result = service.generate_actions(
+            user_prompt=user_prompt,
+            resume_data=parsed_resume_data,
+            job_description=job_description,
+            uploaded_files_text=merged_uploaded_text,
+        )
+
+        return ResumeAssistantOut(
+            suggestions=result.get("suggestions", []),
+            missing_sections=result.get("missing_sections", []),
+            skills_to_add=result.get("skills_to_add", []),
+            skills_to_remove=result.get("skills_to_remove", []),
+            design_suggestions=result.get("design_suggestions", []),
+            actions=result.get("actions", []),
+            model=result.get("model", "gemini-1.5-pro"),
+        )
+    except HTTPException:
+        raise
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate assistant actions: {exc}",
+        ) from exc
 
 
 @router.post("/resume/generate", response_model=ResumeGenerateOut)
@@ -125,7 +199,7 @@ def compare_resume_versions(
 
 
 @router.post("/resume/chat", response_model=ResumeChatOut)
-def resume_chat(payload: ResumeChatIn) -> ResumeChatOut:
+def resume_chat(payload: ResumeChatIn, db: Session = Depends(get_db)) -> ResumeChatOut:
     """
     Process user input for resume building with AI assistance.
     
@@ -135,9 +209,37 @@ def resume_chat(payload: ResumeChatIn) -> ResumeChatOut:
     - Asks follow-up questions to gather more details
     - Returns confidence score for the generated content
     """
+    user_uuid = UUID(payload.user_id)
+    user = get_user_by_id(db, user_uuid)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
     chat_service = ResumeChatService()
     result = chat_service.process_user_input(payload.user_input, payload.context)
-    
+
+    resume_uuid = UUID(payload.resume_id)
+    create_chat_turn(
+        db,
+        user_id=user_uuid,
+        resume_id=resume_uuid,
+        role="user",
+        message=payload.user_input,
+        metadata={"context": payload.context},
+    )
+    create_chat_turn(
+        db,
+        user_id=user_uuid,
+        resume_id=resume_uuid,
+        role="assistant",
+        message=result["response"],
+        metadata={
+            "confidence": result["confidence"],
+            "generated_bullet": result.get("generated_bullet"),
+            "follow_up_questions": result.get("follow_up_questions", []),
+        },
+    )
+    db.commit()
+
     return ResumeChatOut(
         response=result["response"],
         generated_bullet=result["generated_bullet"],
@@ -210,6 +312,8 @@ def get_jd_feedback(payload: JDFeedbackIn, db: Session = Depends(get_db)) -> JDF
 async def upload_resume_file(
     file: UploadFile = File(...),
     user_id: str = Form(...),
+    title: str = Form(default="Uploaded Resume"),
+    db: Session = Depends(get_db),
 ) -> ResumeUploadOut:
     """
     Upload and parse an existing resume file (PDF, DOCX, or TXT).
@@ -221,6 +325,11 @@ async def upload_resume_file(
     - Generates a unique resume ID
     """
     try:
+        user_uuid = UUID(user_id)
+        user = get_user_by_id(db, user_uuid)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
         # Read file content
         file_content = await file.read()
         
@@ -233,9 +342,38 @@ async def upload_resume_file(
         # Parse resume
         parsing_service = ResumeParsingService()
         parsed = parsing_service.parse_uploaded_file(file_content, filename)
-        
-        # Create resume ID
-        resume_id = str(uuid.uuid4())
+
+        extracted_text = parsed.get("raw_text", "")
+        resume = get_resume(db, resume_id=UUID(parsed.get("resume_id")) if parsed.get("resume_id") else None, user_id=user_uuid) if parsed.get("resume_id") else None
+        if resume is None:
+            resume = create_resume(
+                db,
+                user_id=user_uuid,
+                title=title or filename,
+                summary=parsed.get("summary"),
+                status="imported",
+                resume_json=parsed,
+            )
+
+        create_resume_version(
+            db,
+            resume=resume,
+            content=parsed,
+            source_text=extracted_text,
+            change_summary="Imported uploaded resume file",
+        )
+
+        create_uploaded_file(
+            db,
+            user_id=user_uuid,
+            resume_id=resume.id,
+            filename=filename,
+            content_type=file.content_type,
+            extracted_text=extracted_text,
+            metadata={"original_filename": filename},
+        )
+
+        db.commit()
         
         # Convert to schema
         parse_result = ResumeParseContent(
@@ -252,7 +390,7 @@ async def upload_resume_file(
         
         return ResumeUploadOut(
             parse_result=parse_result,
-            resume_id=resume_id,
+            resume_id=str(resume.id),
         )
     
     except HTTPException:

@@ -139,3 +139,94 @@ def generate_career_insights(db: Session, user_id: UUID, use_llm: bool = False) 
         "weak_areas": weak_areas,
         "recommendations": recommendations,
     }
+
+
+def analyze_resume_data_insights(resume_data: dict, use_llm: bool = True) -> dict:
+    raw_personal = resume_data.get("personal")
+    personal: dict = raw_personal if isinstance(raw_personal, dict) else {}
+
+    summary = str(resume_data.get("summary") or "")
+    skills = [str(item).strip() for item in (resume_data.get("skills") or []) if str(item).strip()]
+    experience = [str(item).strip() for item in (resume_data.get("experience") or []) if str(item).strip()]
+    projects = [str(item).strip() for item in (resume_data.get("projects") or []) if str(item).strip()]
+    education = [str(item).strip() for item in (resume_data.get("education") or []) if str(item).strip()]
+    achievements = [str(item).strip() for item in (resume_data.get("achievements") or []) if str(item).strip()]
+
+    skill_distribution = Counter(skills)
+
+    strengths: list[str] = []
+    weak_areas: list[str] = []
+
+    if len(skills) >= 8:
+        strengths.append("Broad skill coverage")
+    else:
+        weak_areas.append("Expand technical skills")
+
+    quantified_entries = sum(1 for item in (experience + projects + achievements) if re.search(r"\b\d+(?:\.\d+)?%?\b", item))
+    if quantified_entries >= 2:
+        strengths.append("Quantified impact in achievements")
+    else:
+        weak_areas.append("Add measurable outcomes")
+
+    if summary and len(summary.split()) >= 20:
+        strengths.append("Clear professional summary")
+    else:
+        weak_areas.append("Improve professional summary")
+
+    if education:
+        strengths.append("Education section present")
+    else:
+        weak_areas.append("Add education details")
+
+    experience_level = min(100, max(0, int(len(experience) * 15 + len(projects) * 10 + quantified_entries * 10)))
+    resume_score = min(
+        100,
+        max(
+            0,
+            int(
+                (15 if personal.get("name") else 0)
+                + (10 if personal.get("email") else 0)
+                + (10 if personal.get("phone") else 0)
+                + (15 if summary else 0)
+                + min(20, len(skills) * 2)
+                + min(20, len(experience) * 5)
+                + min(10, len(projects) * 5)
+            ),
+        ),
+    )
+
+    recommendations = []
+    if "Expand technical skills" in weak_areas:
+        recommendations.append("Add role-relevant tools and frameworks to the skills section")
+    if "Add measurable outcomes" in weak_areas:
+        recommendations.append("Include metrics in experience and project bullets")
+    if "Improve professional summary" in weak_areas:
+        recommendations.append("Rewrite summary to highlight domain focus and recent impact")
+    if "Add education details" in weak_areas:
+        recommendations.append("Include degree, institution, and graduation timeline")
+
+    if use_llm:
+        llm_recs = _llm_recommendations(
+            {
+                "summary": summary,
+                "skills": skills,
+                "experience": experience,
+                "projects": projects,
+                "education": education,
+                "achievements": achievements,
+                "strength_areas": strengths,
+                "weak_areas": weak_areas,
+                "recommendations": recommendations,
+            }
+        )
+        if llm_recs:
+            recommendations = llm_recs
+
+    return {
+        "skill_distribution": dict(skill_distribution),
+        "strength_areas": strengths,
+        "weak_areas": weak_areas,
+        "experience_level": experience_level,
+        "resume_score": resume_score,
+        "recommendations": recommendations,
+    }
