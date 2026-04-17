@@ -6,6 +6,7 @@ from collections.abc import Generator
 
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 logger = logging.getLogger(__name__)
@@ -34,9 +35,13 @@ except Exception:
 
 
 def init_db() -> None:
-    with engine.begin() as connection:
-        connection.execute(text("CREATE EXTENSION IF NOT EXISTS pgcrypto"))
-        connection.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+    with engine.connect() as connection:
+        autocommit_connection = connection.execution_options(isolation_level="AUTOCOMMIT")
+        autocommit_connection.execute(text("CREATE EXTENSION IF NOT EXISTS pgcrypto"))
+        try:
+            autocommit_connection.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+        except DBAPIError as exc:
+            logger.warning("pgvector extension is unavailable; vector features may be limited: %s", exc)
     logger.info("CareerOS database initialized")
 
 

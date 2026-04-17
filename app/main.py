@@ -1,7 +1,12 @@
 import logging
+import time
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.requests import Request
+from starlette.responses import Response
 
+from app.test_route import router as test_router
 from app.core.database import init_db
 from app.routes.auth import router as auth_router
 from app.routes.events import router as events_router
@@ -22,12 +27,36 @@ logging.basicConfig(
 
 app = FastAPI(title="CareerOS API", version="0.1.0")
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 @app.on_event("startup")
 def on_startup() -> None:
     init_db()
 
 
+@app.middleware("http")
+async def log_requests(request: Request, call_next) -> Response:
+    start = time.perf_counter()
+    logging.getLogger("api.request").info("request %s %s", request.method, request.url.path)
+    response = await call_next(request)
+    duration_ms = round((time.perf_counter() - start) * 1000, 2)
+    logging.getLogger("api.response").info(
+        "response %s %s status=%s duration_ms=%s",
+        request.method,
+        request.url.path,
+        response.status_code,
+        duration_ms,
+    )
+    return response
+
+app.include_router(test_router)
 app.include_router(health_router)
 app.include_router(auth_router)
 app.include_router(storage_router)

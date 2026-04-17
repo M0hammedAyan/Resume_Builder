@@ -22,9 +22,70 @@ import type {
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000",
   timeout: 30000,
+  headers: {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  },
 });
 
+api.interceptors.request.use((config) => {
+  const token = globalThis.localStorage?.getItem("authToken");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+type ApiEnvelope<T> = {
+  status: string;
+  data: T;
+};
+
+const unwrapEnvelope = <T>(value: ApiEnvelope<T> | T): T => {
+  if (value && typeof value === "object" && "status" in value && "data" in value) {
+    return (value as ApiEnvelope<T>).data;
+  }
+  return value as T;
+};
+
+type ResumeAnalysisWireSuggestion = {
+  section: "experience" | "projects" | "skills" | "education" | "achievements";
+  current_bullet?: string;
+  suggestion: string;
+  reason: string;
+  impact: "high" | "medium" | "low";
+};
+
+type ResumeAnalysisWireResult = Omit<ResumeAnalysisResult, "suggestions"> & {
+  suggestions: ResumeAnalysisWireSuggestion[];
+};
+
 export const apiService = {
+  async register(payload: { email: string; password: string; name: string }) {
+    const response = await api.post<ApiEnvelope<{ access_token: string; token_type: string }>>(
+      "/auth/register",
+      payload,
+    );
+    const data = unwrapEnvelope(response.data);
+    globalThis.localStorage?.setItem("authToken", data.access_token);
+    return data;
+  },
+
+  async login(payload: { email: string; password: string }) {
+    const response = await api.post<ApiEnvelope<{ access_token: string; token_type: string }>>(
+      "/auth/login",
+      payload,
+    );
+    const data = unwrapEnvelope(response.data);
+    globalThis.localStorage?.setItem("authToken", data.access_token);
+    return data;
+  },
+
+  async testDbInsert(payload: { email: string; password: string; name?: string }) {
+    const response = await api.post<ApiEnvelope<{ user_id: string; email: string }>>("/test-db", payload);
+    return unwrapEnvelope(response.data);
+  },
+
   async createEvent(payload: { user_id: string; raw_text: string }) {
     const response = await api.post("/events", payload);
     return response.data;
@@ -184,8 +245,17 @@ export const apiService = {
   },
 
   async analyzeResumeAndImprove(payload: ResumeAnalysisRequest) {
-    const response = await api.post<ResumeAnalysisResult>("/resume/analyze-improve", payload);
-    return response.data;
+    const response = await api.post<ResumeAnalysisWireResult>("/resume/analyze-improve", payload);
+    return {
+      ...response.data,
+      suggestions: response.data.suggestions.map((item) => ({
+        section: item.section,
+        currentBullet: item.current_bullet,
+        suggestion: item.suggestion,
+        reason: item.reason,
+        impact: item.impact,
+      })),
+    } as ResumeAnalysisResult;
   },
 
   async getResumeAssistantActions(payload: {

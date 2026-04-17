@@ -31,4 +31,4 @@ class ResumeVersion(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 
-    resume = relationship("Resume", back_populates="versions")
+    resume = relationship("Resume", back_populates="versions", foreign_keys=[resume_id])

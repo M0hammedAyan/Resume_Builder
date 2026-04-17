@@ -6,23 +6,30 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class AuthRegisterIn(BaseModel):
+class RegisterRequest(BaseModel):
     email: str = Field(..., min_length=3)
-    password: str = Field(..., min_length=8)
-    name: str | None = None
-    experience_level: str | None = None
-    target_roles: list[str] = Field(default_factory=list)
+    password: str
+    name: str
 
 
-class AuthLoginIn(BaseModel):
+class LoginRequest(BaseModel):
     email: str = Field(..., min_length=3)
-    password: str = Field(..., min_length=8)
+    password: str
 
 
-class TokenOut(BaseModel):
+class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
-    expires_at: datetime
+
+
+class RegisterSuccessOut(BaseModel):
+    message: str
+
+
+AuthRegisterIn = RegisterRequest
+AuthLoginIn = LoginRequest
+LoginSuccessOut = TokenResponse
+TokenOut = TokenResponse
 
 
 class UserOut(BaseModel):
