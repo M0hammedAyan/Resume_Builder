@@ -23,3 +23,8 @@ Thumbs.db
 *.log
 npm-debug.log*
 
+# Python cache artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+
