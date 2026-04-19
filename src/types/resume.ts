@@ -70,16 +70,41 @@ export interface JDEligibilityResult {
 }
 
 // File Upload & Resume Analysis
+export interface ResumePersonalInfo {
+  name: string;
+  email: string;
+  phone: string;
+  links: string[];
+  summary?: string | null;
+}
+
+export interface ResumeEducationEntry {
+  institution: string;
+  degree: string;
+  year: string;
+  description: string;
+}
+
+export interface ResumeExperienceEntry {
+  title: string;
+  company: string;
+  description: string;
+}
+
+export interface ResumeProjectEntry {
+  title: string;
+  company: string;
+  description: string;
+  link?: string;
+}
+
 export interface ResumeParseResult {
-  name?: string;
-  email?: string;
-  phone?: string;
-  summary?: string;
-  experience: string[];
-  projects: string[];
+  personal: ResumePersonalInfo;
+  education: ResumeEducationEntry[];
+  experience: ResumeExperienceEntry[];
   skills: string[];
-  education: string[];
-  raw_text: string;
+  projects: ResumeProjectEntry[];
+  summary?: string | null;
 }
 
 export interface ResumeUploadResponse {

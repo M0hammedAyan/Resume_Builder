@@ -10,11 +10,11 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantClasses: Record<Variant, string> = {
   primary:
-    "bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 text-slate-950 shadow-lg shadow-cyan-500/25 hover:brightness-105",
+    "bg-slate-900 text-white shadow-sm shadow-slate-900/15 hover:bg-slate-800 focus-visible:ring-slate-400",
   secondary:
-    "bg-slate-800 text-slate-100 border border-slate-700 hover:bg-slate-700",
-  ghost: "bg-transparent text-slate-300 border border-slate-700 hover:bg-slate-800/60",
-  danger: "bg-rose-600 text-rose-50 hover:bg-rose-500",
+    "bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 focus-visible:ring-slate-300",
+  ghost: "bg-transparent text-slate-600 border border-transparent hover:bg-slate-100 focus-visible:ring-slate-300",
+  danger: "bg-rose-600 text-white hover:bg-rose-500 focus-visible:ring-rose-300",
 };
 
 export function Button({
@@ -29,10 +29,17 @@ export function Button({
     <motion.button
       whileTap={{ scale: 0.98 }}
       disabled={disabled || loading}
-      className={`inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${variantClasses[variant]} ${className}`}
+      className={`inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold transition outline-none ring-offset-2 focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60 ${variantClasses[variant]} ${className}`}
       {...props}
     >
-      {loading ? "Working..." : children}
+      {loading ? (
+        <span className="inline-flex items-center gap-2">
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+          Working...
+        </span>
+      ) : (
+        children
+      )}
     </motion.button>
   );
 }

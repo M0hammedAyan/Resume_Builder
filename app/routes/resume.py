@@ -27,12 +27,14 @@ from app.schemas.resume_chat import (
     JDFeedbackOut,
     ResumeAssistantOut,
 )
+from app.schemas.storage import ResumeOut
 
 from app.services.pipeline_service import run_vector_selection_pipeline
 from app.services.resume_chat_service import ResumeChatService, JDAnalysisService
 from app.services.gemini_resume_assistant_service import GeminiResumeAssistantService
 from app.services.uploaded_file_text_service import UploadedFileTextService
-from app.services.resume_parsing_service import ResumeParsingService, ResumeAnalysisService
+from app.services.resume_parser import parse_resume_text
+from app.services.resume_parsing_service import ResumeAnalysisService
 from app.schemas.resume_upload import (
     ResumeUploadOut,
     ResumeAnalysisIn,
@@ -339,21 +341,23 @@ async def upload_resume_file(
         # Get filename
         filename = file.filename or "resume"
         
-        # Parse resume
-        parsing_service = ResumeParsingService()
-        parsed = parsing_service.parse_uploaded_file(file_content, filename)
+        extractor = UploadedFileTextService()
+        extracted_text = extractor.extract_text(file_content, filename)
 
-        extracted_text = parsed.get("raw_text", "")
-        resume = get_resume(db, resume_id=UUID(parsed.get("resume_id")) if parsed.get("resume_id") else None, user_id=user_uuid) if parsed.get("resume_id") else None
-        if resume is None:
-            resume = create_resume(
-                db,
-                user_id=user_uuid,
-                title=title or filename,
-                summary=parsed.get("summary"),
-                status="imported",
-                resume_json=parsed,
-            )
+        print("Extracted text:", extracted_text[:500])
+
+        parsed = parse_resume_text(extracted_text)
+        print("Parsed JSON:", parsed)
+
+        summary = parsed.get("summary") or parsed.get("personal", {}).get("summary")
+        resume = create_resume(
+            db,
+            user_id=user_uuid,
+            title=title or filename,
+            summary=summary,
+            status="draft",
+            resume_json=parsed,
+        )
 
         create_resume_version(
             db,
@@ -376,17 +380,7 @@ async def upload_resume_file(
         db.commit()
         
         # Convert to schema
-        parse_result = ResumeParseContent(
-            name=parsed.get("name"),
-            email=parsed.get("email"),
-            phone=parsed.get("phone"),
-            summary=parsed.get("summary"),
-            experience=parsed.get("experience", []),
-            projects=parsed.get("projects", []),
-            skills=parsed.get("skills", []),
-            education=parsed.get("education", []),
-            raw_text=parsed.get("raw_text", ""),
-        )
+        parse_result = ResumeParseContent.model_validate(parsed)
         
         return ResumeUploadOut(
             parse_result=parse_result,
@@ -401,6 +395,14 @@ async def upload_resume_file(
         raise HTTPException(
             status_code=500, detail=f"Failed to parse resume file: {str(e)}"
         ) from e
+
+
+@router.get("/resume/{resume_id}", response_model=ResumeOut)
+def read_resume_compat(resume_id: UUID, user_id: UUID = Query(...), db: Session = Depends(get_db)) -> ResumeOut:
+    resume = get_resume(db, resume_id=resume_id, user_id=user_id)
+    if not resume:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resume not found")
+    return ResumeOut.model_validate(resume)
 
 
 @router.post("/resume/analyze-improve", response_model=ResumeAnalysisOut)
@@ -418,17 +420,31 @@ def analyze_and_improve_resume(
     """
     try:
         analysis_service = ResumeAnalysisService()
-        
-        # Convert payload to dict for analysis
+        personal = payload.resume_content.personal
+
+        experience = [
+            " ".join(part for part in [item.title, item.company, item.description] if part).strip()
+            for item in payload.resume_content.experience
+        ]
+        projects = [
+            " ".join(part for part in [item.title, item.company, item.description, item.link] if part).strip()
+            for item in payload.resume_content.projects
+        ]
+        education = [
+            " ".join(part for part in [item.institution, item.degree, item.year, item.description] if part).strip()
+            for item in payload.resume_content.education
+        ]
+
         resume_dict = {
-            "name": payload.resume_content.name,
-            "email": payload.resume_content.email,
-            "phone": payload.resume_content.phone,
-            "summary": payload.resume_content.summary,
-            "experience": payload.resume_content.experience,
-            "projects": payload.resume_content.projects,
+            "name": personal.name,
+            "email": personal.email,
+            "phone": personal.phone,
+            "links": personal.links,
+            "summary": payload.resume_content.summary or personal.summary,
+            "experience": [item for item in experience if item],
+            "projects": [item for item in projects if item],
             "skills": payload.resume_content.skills,
-            "education": payload.resume_content.education,
+            "education": [item for item in education if item],
         }
         
         # Perform analysis

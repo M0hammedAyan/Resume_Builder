@@ -66,15 +66,32 @@ export function parseResumeText(rawText: string): ResumeParseResult {
   const probableName = lines.find((line) => /^[A-Z][A-Z\s.'-]{3,}$/.test(line)) || lines[0] || "Uploaded Candidate";
 
   return {
-    name: probableName,
-    email,
-    phone,
-    summary: summaryLines.join(" ") || undefined,
-    experience: groupBullets(experienceLines),
-    projects: groupBullets(projectsLines),
+    personal: {
+      name: probableName,
+      email: email ?? "",
+      phone: phone ?? "",
+      links: [],
+      summary: summaryLines.join(" ") || undefined,
+    },
+    education: groupBullets(educationLines).map((item) => ({
+      institution: item,
+      degree: "",
+      year: "",
+      description: "",
+    })),
+    experience: groupBullets(experienceLines).map((item) => ({
+      title: item,
+      company: "",
+      description: item,
+    })),
+    projects: groupBullets(projectsLines).map((item) => ({
+      title: item,
+      company: "",
+      description: item,
+      link: "",
+    })),
     skills: groupBullets(skillsLines),
-    education: groupBullets(educationLines),
-    rawText,
+    summary: summaryLines.join(" ") || undefined,
   };
 }
 
@@ -104,12 +121,17 @@ export async function parseResumeFileLocally(file: File): Promise<ResumeParseRes
 
   // For PDF/DOC without backend parser, create a minimal safe fallback.
   return {
-    name: file.name.replace(/\.[^.]+$/, ""),
-    summary: "Uploaded resume (limited local parsing for this file type).",
+    personal: {
+      name: file.name.replace(/\.[^.]+$/, ""),
+      email: "",
+      phone: "",
+      links: [],
+      summary: "Uploaded resume (limited local parsing for this file type).",
+    },
+    education: [],
     experience: [],
     projects: [],
     skills: [],
-    education: [],
-    rawText: "",
+    summary: "Uploaded resume (limited local parsing for this file type).",
   };
 }

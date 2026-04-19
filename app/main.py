@@ -9,6 +9,7 @@ from starlette.responses import Response
 from app.test_route import router as test_router
 from app.core.database import init_db
 from app.routes.auth import router as auth_router
+from app.routes.ai import router as ai_router
 from app.routes.events import router as events_router
 from app.routes.feedback import router as feedback_router
 from app.routes.health import router as health_router
@@ -35,7 +36,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 @app.on_event("startup")
 def on_startup() -> None:
     init_db()
@@ -59,6 +59,7 @@ async def log_requests(request: Request, call_next) -> Response:
 app.include_router(test_router)
 app.include_router(health_router)
 app.include_router(auth_router)
+app.include_router(ai_router)
 app.include_router(storage_router)
 app.include_router(events_router)
 app.include_router(feedback_router)

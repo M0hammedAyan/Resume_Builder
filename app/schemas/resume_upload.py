@@ -1,19 +1,48 @@
 """Schemas for resume file upload and analysis."""
+
 from typing import Optional
-from pydantic import BaseModel
+
+from pydantic import BaseModel, Field
+
+
+class ResumePersonalInfo(BaseModel):
+    name: str = ""
+    email: str = ""
+    phone: str = ""
+    links: list[str] = Field(default_factory=list)
+    summary: str | None = None
+
+
+class ResumeEducationItem(BaseModel):
+    institution: str = ""
+    degree: str = ""
+    year: str = ""
+    description: str = ""
+
+
+class ResumeExperienceItem(BaseModel):
+    title: str = ""
+    company: str = ""
+    description: str = ""
+
+
+class ResumeProjectItem(BaseModel):
+    title: str = ""
+    company: str = ""
+    description: str = ""
+    link: str = ""
 
 
 class ResumeParseContent(BaseModel):
     """Parsed resume content structure."""
-    name: Optional[str] = None
-    email: Optional[str] = None
-    phone: Optional[str] = None
+    personal: ResumePersonalInfo = Field(default_factory=ResumePersonalInfo)
+    education: list[ResumeEducationItem] = Field(default_factory=list)
+    experience: list[ResumeExperienceItem] = Field(default_factory=list)
+    skills: list[str] = Field(default_factory=list)
+    projects: list[ResumeProjectItem] = Field(default_factory=list)
     summary: Optional[str] = None
-    experience: list[str]
-    projects: list[str]
-    skills: list[str]
-    education: list[str]
-    raw_text: str
+
+    model_config = {"extra": "ignore"}
 
 
 class ResumeUploadOut(BaseModel):
