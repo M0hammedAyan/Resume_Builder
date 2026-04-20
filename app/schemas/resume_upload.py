@@ -17,6 +17,7 @@ class ResumeEducationItem(BaseModel):
     institution: str = ""
     degree: str = ""
     year: str = ""
+    cgpa: str = ""
     description: str = ""
 
 
@@ -41,6 +42,8 @@ class ResumeParseContent(BaseModel):
     skills: list[str] = Field(default_factory=list)
     projects: list[ResumeProjectItem] = Field(default_factory=list)
     summary: Optional[str] = None
+    raw_text: Optional[str] = None
+    is_parsed: bool = True
 
     model_config = {"extra": "ignore"}
 
@@ -49,6 +52,7 @@ class ResumeUploadOut(BaseModel):
     """Response from resume file upload endpoint."""
     parse_result: ResumeParseContent
     resume_id: str
+    is_parsed: bool = True
 
 
 class ResumeImprovementSuggestion(BaseModel):

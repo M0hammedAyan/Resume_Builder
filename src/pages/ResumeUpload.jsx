@@ -18,6 +18,7 @@ function ResumeUpload({ setResumeJson, setResumeId }) {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [parseWarning, setParseWarning] = useState("");
 
   const isFileValid = useMemo(() => {
     if (!file) return false;
@@ -49,6 +50,7 @@ function ResumeUpload({ setResumeJson, setResumeId }) {
   const handleUpload = async () => {
     setErrorMessage("");
     setSuccessMessage("");
+    setParseWarning("");
 
     if (!file || !isFileValid) {
       setErrorMessage("Please select a valid PDF or DOCX file first");
@@ -62,6 +64,7 @@ function ResumeUpload({ setResumeJson, setResumeId }) {
       console.log("Uploaded resume:", data);
 
       const resumeId = data.resume_id ?? data.id ?? "";
+      const isParsed = Boolean(data.is_parsed ?? data.parse_result?.is_parsed ?? false);
 
       setResumeJson(data.parse_result ?? data.resume_json ?? null);
       setResumeId(resumeId);
@@ -70,7 +73,14 @@ function ResumeUpload({ setResumeJson, setResumeId }) {
         globalThis.localStorage?.setItem("activeResumeId", resumeId);
       }
 
-      setSuccessMessage("Upload successful. Opening Resume Studio...");
+      if (!isParsed) {
+        globalThis.localStorage?.setItem("resumeParseWarning", "true");
+        setParseWarning("We couldn't fully extract your resume. Please review and edit.");
+        setSuccessMessage("Upload successful. Some data couldn't be extracted, but your resume was saved.");
+      } else {
+        globalThis.localStorage?.removeItem("resumeParseWarning");
+        setSuccessMessage("Upload successful. Opening Resume Studio...");
+      }
 
       window.setTimeout(() => navigate("/resume/studio"), 500);
     } catch (error) {
@@ -131,6 +141,7 @@ function ResumeUpload({ setResumeJson, setResumeId }) {
           </div>
 
           {errorMessage ? <p className="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{errorMessage}</p> : null}
+          {parseWarning ? <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">{parseWarning}</p> : null}
           {successMessage ? <p className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{successMessage}</p> : null}
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">

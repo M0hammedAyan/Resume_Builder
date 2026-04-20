@@ -86,6 +86,24 @@ export const uploadResume = async (file, title = "Uploaded Resume") => {
   return response;
 };
 
+export const reparseResume = async (resumeId) => {
+  const currentUser = await getCurrentUser();
+  const formData = new FormData();
+  formData.append("resume_id", resumeId);
+  formData.append("user_id", currentUser.data.id);
+
+  const response = await api.post("/resume/reparse", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+    params: {
+      user_id: currentUser.data.id,
+    },
+  });
+
+  return response;
+};
+
 export const getResumeById = async (id) => {
   const currentUser = await getCurrentUser();
   const response = await api.get(`/resumes/${encodeURIComponent(id)}`, {
@@ -136,6 +154,28 @@ export const createResumeRecord = async ({ userId, title, summary, resumeJson })
 
 export const rewriteTextWithAI = async ({ text, context }) => {
   const response = await api.post("/ai/rewrite", { text, context });
+  return response;
+};
+
+export const chatUpdateResume = async ({ message, resumeId }) => {
+  const response = await api.post("/ai/chat-update", {
+    message,
+    resume_id: resumeId,
+  });
+  return response;
+};
+
+export const exportResumeFile = async ({ resumeId, format }) => {
+  const response = await api.post(
+    "/resume/export",
+    {
+      resume_id: resumeId,
+      format,
+    },
+    {
+      responseType: "blob",
+    },
+  );
   return response;
 };
 

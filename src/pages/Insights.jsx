@@ -1,6 +1,20 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { getCurrentUser, getResumeById, listResumes } from "../services/api.js";
 import { apiService } from "../services/api.ts";
 import { Badge } from "../components/ui/Badge";
@@ -10,10 +24,27 @@ import { Card } from "../components/ui/Card";
 function Insights() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [analyzing, setAnalyzing] = useState(false);
+  const [fetchingInsights, setFetchingInsights] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [resumeJson, setResumeJson] = useState(null);
-  const [analysis, setAnalysis] = useState(null);
+  const [resumeId, setResumeId] = useState("");
+  const [insights, setInsights] = useState(null);
+
+  const scoreTrendData = useMemo(
+    () =>
+      (insights?.score_history ?? []).map((score, index) => ({
+        version: `V${index + 1}`,
+        score,
+      })),
+    [insights],
+  );
+
+  const skillCoverageData = useMemo(
+    () => [
+      { name: "Matched", value: Number(insights?.skill_coverage?.matched ?? 0), color: "#0ea5e9" },
+      { name: "Missing", value: Number(insights?.skill_coverage?.missing ?? 0), color: "#ef4444" },
+    ],
+    [insights],
+  );
 
   useEffect(() => {
     let active = true;
@@ -51,7 +82,7 @@ function Insights() {
           return;
         }
 
-        setResumeJson(resumeRecord.resume_json);
+        setResumeId(String(resumeRecord.id ?? ""));
       } catch (error) {
         if (active) {
           setErrorMessage(error instanceof Error ? error.message : "Failed to load resume");
@@ -70,23 +101,30 @@ function Insights() {
     };
   }, []);
 
-  const handleAnalyze = async () => {
-    if (!resumeJson) {
+  const handleFetchInsights = async () => {
+    if (!resumeId) {
       return;
     }
 
-    setAnalyzing(true);
+    setFetchingInsights(true);
     setErrorMessage("");
 
     try {
-      const response = await apiService.getInsights({ resume_data: resumeJson, use_llm: true });
-      setAnalysis(response);
+      const response = await apiService.getInsightsDashboard(resumeId);
+      setInsights(response);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to compute insights");
+      setErrorMessage(error instanceof Error ? error.message : "Failed to load insights dashboard");
     } finally {
-      setAnalyzing(false);
+      setFetchingInsights(false);
     }
   };
+
+  useEffect(() => {
+    if (!resumeId) {
+      return;
+    }
+    handleFetchInsights();
+  }, [resumeId]);
 
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-8 sm:py-10">
@@ -107,9 +145,11 @@ function Insights() {
             </div>
           ) : (
             <>
-              <p className="text-sm text-slate-600">Insights are generated from the persisted resume.resume_json only.</p>
+              <p className="text-sm text-slate-600">Live dashboard built from recruiter analyses, resume versions, and current resume JSON.</p>
               <div className="flex gap-2">
-                <Button onClick={handleAnalyze} disabled={!resumeJson || analyzing} loading={analyzing}>Generate Insights</Button>
+                <Button onClick={handleFetchInsights} disabled={!resumeId || fetchingInsights} loading={fetchingInsights}>
+                  {fetchingInsights ? "Refreshing..." : "Refresh Insights"}
+                </Button>
                 <Button variant="ghost" onClick={() => navigate("/export")}>Go to Export</Button>
               </div>
             </>
@@ -117,24 +157,107 @@ function Insights() {
 
           {errorMessage ? <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{errorMessage}</p> : null}
 
-          {analysis ? (
-            <div className="space-y-3">
-              <div className="rounded-xl border border-slate-200 bg-white p-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Summary</p>
-                <p className="mt-2 text-sm text-slate-700">{analysis.summary || "No summary available"}</p>
+          {!insights && !loading && !fetchingInsights ? (
+            <div className="rounded-xl border border-dashed border-slate-300 bg-white px-4 py-6 text-center text-sm text-slate-600">
+              Run Recruiter Lens analysis first, then refresh insights to see what to improve next.
+            </div>
+          ) : null}
+
+          {insights ? (
+            <div className="space-y-4">
+              <div className="rounded-xl border border-slate-200 bg-white p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Score Overview</p>
+                <div className="mt-2 flex items-end justify-between gap-3">
+                  <p className="text-4xl font-bold text-slate-900">{Math.round(Number(insights.latest_score ?? 0))}%</p>
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">{insights.resume_strength}</span>
+                </div>
+                <div className="mt-3 h-2 w-full rounded-full bg-slate-200">
+                  <div
+                    className="h-2 rounded-full bg-sky-500"
+                    style={{ width: `${Math.max(0, Math.min(100, Math.round(Number(insights.latest_score ?? 0))))}%` }}
+                  />
+                </div>
               </div>
-              <div className="rounded-xl border border-slate-200 bg-white p-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Top Strengths</p>
-                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700">
-                  {(analysis.top_strengths ?? []).map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-slate-200 bg-white p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Score Trend</p>
+                  <div className="mt-3 h-56 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={scoreTrendData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="version" />
+                        <YAxis domain={[0, 100]} />
+                        <Tooltip />
+                        <Line type="monotone" dataKey="score" stroke="#0ea5e9" strokeWidth={3} dot={{ r: 4 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-slate-200 bg-white p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Skill Coverage</p>
+                  <div className="mt-3 h-56 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={skillCoverageData} dataKey="value" nameKey="name" innerRadius={50} outerRadius={80}>
+                          {skillCoverageData.map((entry) => (
+                            <Cell key={entry.name} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="mt-2 flex items-center justify-center gap-4 text-xs text-slate-600">
+                    <span>Matched: {Number(insights.skill_coverage?.matched ?? 0)}</span>
+                    <span>Missing: {Number(insights.skill_coverage?.missing ?? 0)}</span>
+                  </div>
+                </div>
               </div>
-              <div className="rounded-xl border border-slate-200 bg-white p-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Recommended Next Steps</p>
+
+              <div className="rounded-xl border border-slate-200 bg-white p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Top Missing Skills</p>
+                {Array.isArray(insights.top_missing_skills) && insights.top_missing_skills.length > 0 ? (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {insights.top_missing_skills.map((skill) => (
+                      <span key={skill} className="rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold text-rose-700">
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-2 text-sm text-slate-700">No critical missing skills right now.</p>
+                )}
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-white p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Improvement Areas</p>
+                {Array.isArray(insights.improvement_areas) && insights.improvement_areas.length > 0 ? (
+                  <div className="mt-3 h-44 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={insights.improvement_areas.map((area) => ({ area, priority: 1 }))}
+                        layout="vertical"
+                        margin={{ top: 10, right: 10, left: 10, bottom: 10 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis type="number" hide domain={[0, 1]} />
+                        <YAxis type="category" dataKey="area" width={120} />
+                        <Tooltip formatter={() => "Focus"} />
+                        <Bar dataKey="priority" fill="#f59e0b" radius={[4, 4, 4, 4]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <p className="mt-2 text-sm text-slate-700">No weak areas detected in the latest cycle.</p>
+                )}
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-white p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Recommendations</p>
                 <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700">
-                  {(analysis.recommended_actions ?? []).map((item) => (
+                  {(insights.recommendations ?? []).map((item) => (
                     <li key={item}>{item}</li>
                   ))}
                 </ul>

@@ -47,6 +47,7 @@ class ResumeOut(BaseModel):
     title: str
     summary: str | None = None
     resume_json: dict[str, Any]
+    is_parsed: bool = False
     status: str
     current_version_id: UUID | None = None
     created_at: datetime

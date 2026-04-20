@@ -57,6 +57,19 @@ export interface ResumeInsightsAnalysis {
   recommendations: string[];
 }
 
+export interface InsightsDashboard {
+  latest_score: number;
+  score_history: number[];
+  skill_coverage: {
+    matched: number;
+    missing: number;
+  };
+  top_missing_skills: string[];
+  improvement_areas: string[];
+  resume_strength: "Good" | "Average" | "Weak";
+  recommendations: string[];
+}
+
 export interface JobMatchResult {
   match_score: number;
   matched_skills: string[];

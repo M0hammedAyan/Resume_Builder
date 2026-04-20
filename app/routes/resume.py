@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import json
+import logging
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -33,7 +34,7 @@ from app.services.pipeline_service import run_vector_selection_pipeline
 from app.services.resume_chat_service import ResumeChatService, JDAnalysisService
 from app.services.gemini_resume_assistant_service import GeminiResumeAssistantService
 from app.services.uploaded_file_text_service import UploadedFileTextService
-from app.services.resume_parser import parse_resume_text
+from app.services.structured_resume_parser import fallback_resume, handle_upload
 from app.services.resume_parsing_service import ResumeAnalysisService
 from app.schemas.resume_upload import (
     ResumeUploadOut,
@@ -43,6 +44,7 @@ from app.schemas.resume_upload import (
 )
 
 router = APIRouter(tags=["resume"])
+logger = logging.getLogger(__name__)
 
 
 @router.post("/resume/generate-assistant-actions", response_model=ResumeAssistantOut)
@@ -344,10 +346,17 @@ async def upload_resume_file(
         extractor = UploadedFileTextService()
         extracted_text = extractor.extract_text(file_content, filename)
 
-        print("Extracted text:", extracted_text[:500])
+        parsed, is_parsed = handle_upload(extracted_text)
+        if not is_parsed:
+            logger.warning("Resume parsing fell back to minimal payload for uploaded file %s", filename)
 
-        parsed = parse_resume_text(extracted_text)
-        print("Parsed JSON:", parsed)
+        parsed.setdefault("personal", {})
+        parsed.setdefault("education", [])
+        parsed.setdefault("experience", [])
+        parsed.setdefault("projects", [])
+        parsed.setdefault("skills", [])
+        parsed["raw_text"] = extracted_text
+        parsed["is_parsed"] = is_parsed
 
         summary = parsed.get("summary") or parsed.get("personal", {}).get("summary")
         resume = create_resume(
@@ -357,6 +366,7 @@ async def upload_resume_file(
             summary=summary,
             status="draft",
             resume_json=parsed,
+            is_parsed=is_parsed,
         )
 
         create_resume_version(
@@ -385,6 +395,7 @@ async def upload_resume_file(
         return ResumeUploadOut(
             parse_result=parse_result,
             resume_id=str(resume.id),
+            is_parsed=is_parsed,
         )
     
     except HTTPException:
@@ -392,9 +403,62 @@ async def upload_resume_file(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:  # noqa: BLE001
+        logger.exception("Failed to parse uploaded resume")
         raise HTTPException(
             status_code=500, detail=f"Failed to parse resume file: {str(e)}"
         ) from e
+
+
+@router.post("/resume/reparse", response_model=ResumeUploadOut)
+def reparse_resume_file(
+    resume_id: str = Form(...),
+    user_id: str = Form(...),
+    db: Session = Depends(get_db),
+) -> ResumeUploadOut:
+    """Re-run parsing from stored raw text without failing the user flow."""
+    try:
+        resume_uuid = UUID(resume_id)
+        user_uuid = UUID(user_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid resume_id or user_id") from exc
+
+    resume = get_resume(db, resume_id=resume_uuid, user_id=user_uuid)
+    if not resume:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resume not found")
+
+    raw_text = (resume.resume_json or {}).get("raw_text") if isinstance(resume.resume_json, dict) else None
+    if not isinstance(raw_text, str) or not raw_text.strip():
+        parsed = fallback_resume("")
+        parsed["is_parsed"] = False
+        parse_result = ResumeParseContent.model_validate(parsed)
+        return ResumeUploadOut(parse_result=parse_result, resume_id=str(resume.id), is_parsed=False)
+
+    parsed, is_parsed = handle_upload(raw_text)
+    parsed.setdefault("personal", {})
+    parsed.setdefault("education", [])
+    parsed.setdefault("experience", [])
+    parsed.setdefault("projects", [])
+    parsed.setdefault("skills", [])
+    parsed["raw_text"] = raw_text
+    parsed["is_parsed"] = is_parsed
+
+    summary = parsed.get("summary") or parsed.get("personal", {}).get("summary")
+    resume.summary = summary
+    resume.resume_json = parsed
+    resume.is_parsed = is_parsed
+
+    create_resume_version(
+        db,
+        resume=resume,
+        content=parsed,
+        source_text=raw_text,
+        change_summary="Re-ran AI parsing from stored raw text",
+    )
+
+    db.commit()
+
+    parse_result = ResumeParseContent.model_validate(parsed)
+    return ResumeUploadOut(parse_result=parse_result, resume_id=str(resume.id), is_parsed=is_parsed)
 
 
 @router.get("/resume/{resume_id}", response_model=ResumeOut)

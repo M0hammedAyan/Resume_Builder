@@ -1,5 +1,6 @@
 import axios from "axios";
 import type {
+  InsightsDashboard,
   JobMatchResult,
   RecruiterResult,
   ResumeInsightsAnalysis,
@@ -29,7 +30,15 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = globalThis.localStorage?.getItem("authToken");
+  const token =
+    globalThis.localStorage?.getItem("authToken") ??
+    globalThis.localStorage?.getItem("token");
+
+  // Normalize legacy token key used by JS auth flow.
+  if (token && !globalThis.localStorage?.getItem("authToken")) {
+    globalThis.localStorage?.setItem("authToken", token);
+  }
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -68,6 +77,7 @@ export const apiService = {
     );
     const data = unwrapEnvelope(response.data);
     globalThis.localStorage?.setItem("authToken", data.access_token);
+    globalThis.localStorage?.setItem("token", data.access_token);
     return data;
   },
 
@@ -78,6 +88,7 @@ export const apiService = {
     );
     const data = unwrapEnvelope(response.data);
     globalThis.localStorage?.setItem("authToken", data.access_token);
+    globalThis.localStorage?.setItem("token", data.access_token);
     return data;
   },
 
@@ -120,47 +131,24 @@ export const apiService = {
   },
 
   async recruiterLensAnalyze(payload: {
-    resume_data: Record<string, unknown>;
+    resume_id: string;
     job_description: string;
   }) {
-    const stringifyList = (value: unknown): string[] => {
-      if (!Array.isArray(value)) return [];
-      return value.map((item) => String(item)).filter((item) => item.trim().length > 0);
-    };
-
-    const personal =
-      payload.resume_data.personal && typeof payload.resume_data.personal === "object"
-        ? (payload.resume_data.personal as Record<string, unknown>)
-        : {};
-
-    const resumeText = [
-      String(personal.name ?? ""),
-      String(payload.resume_data.summary ?? ""),
-      ...stringifyList(payload.resume_data.experience),
-      ...stringifyList(payload.resume_data.projects),
-      ...stringifyList(payload.resume_data.skills),
-      ...stringifyList(payload.resume_data.education),
-      ...stringifyList(payload.resume_data.achievements),
-    ]
-      .filter((line) => line.trim().length > 0)
-      .join("\n");
-
-    const formData = new FormData();
-    const file = new File([resumeText], "resume.txt", { type: "text/plain" });
-    formData.append("file", file);
-    formData.append("job_description", payload.job_description);
-
     const response = await api.post<{
       score: number;
+      breakdown: {
+        hard_skills: number;
+        preferred_skills: number;
+        experience: number;
+        keywords: number;
+        semantic_similarity?: number;
+      };
       missing_skills: string[];
       suggestions: string[];
-      match_details?: {
-        required_pairs?: Array<{ jd_skill: string; resume_skill: string; similarity: number }>;
-      };
-    }>("/recruiter/lens-analyze", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
+      metadata?: Record<string, unknown>;
+    }>("/recruiter-lens/analyze", {
+      resume_id: payload.resume_id,
+      job_description: payload.job_description,
     });
 
     return response.data;
@@ -174,6 +162,11 @@ export const apiService = {
       resume_data: payload.resume_data,
       use_llm: payload.use_llm ?? true,
     });
+    return response.data;
+  },
+
+  async getInsightsDashboard(resumeId: string) {
+    const response = await api.get<InsightsDashboard>(`/insights/${encodeURIComponent(resumeId)}`);
     return response.data;
   },
 

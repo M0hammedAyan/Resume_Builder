@@ -30,6 +30,7 @@ class Resume(Base):
     title: Mapped[str] = mapped_column(Text, nullable=False)
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     resume_json: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    is_parsed: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
     status: Mapped[ResumeStatus] = mapped_column(
         Enum(ResumeStatus, name="resume_status", native_enum=True),
         nullable=False,

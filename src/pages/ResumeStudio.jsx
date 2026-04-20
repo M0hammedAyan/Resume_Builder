@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader2, Menu, Save } from "lucide-react";
-import { createResumeRecord, getCurrentUser, getResumeById, listResumes, updateResume } from "../services/api.js";
+import { Download, Loader2, Menu, Save } from "lucide-react";
+import { chatUpdateResume, createResumeRecord, exportResumeFile, getCurrentUser, getResumeById, listResumes, reparseResume, updateResume } from "../services/api.js";
 import ResumeStudioSidebar from "../components/resumeStudio/ResumeStudioSidebar.jsx";
 import EditableSection from "../components/resumeStudio/EditableSection.jsx";
 import ResumeStudioAIPanel from "../components/resumeStudio/ResumeStudioAIPanel.jsx";
@@ -446,6 +446,15 @@ function ResumeStudio({ resumeJson, setResumeJson, resumeId, setResumeId }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [saveStatus, setSaveStatus] = useState("Saved");
   const [errorMessage, setErrorMessage] = useState("");
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatNotice, setChatNotice] = useState("");
+  const [chatError, setChatError] = useState("");
+  const [lastChatSnapshot, setLastChatSnapshot] = useState(null);
+  const [exportingFormat, setExportingFormat] = useState("");
+  const [jdDraft, setJdDraft] = useState(() => globalThis.localStorage?.getItem("recruiterLens.jdDraft") ?? "");
+  const [parseWarning, setParseWarning] = useState(false);
+  const [reparseLoading, setReparseLoading] = useState(false);
   const sectionRefs = useRef({});
   const hydratedRef = useRef(false);
   const lastSavedSerializedRef = useRef("");
@@ -466,6 +475,7 @@ function ResumeStudio({ resumeJson, setResumeJson, resumeId, setResumeId }) {
         const currentUser = await getCurrentUser();
         const currentUserId = currentUser.data.id;
         const storedResumeId = globalThis.localStorage?.getItem("activeResumeId") ?? initialResumeRef.current.resumeId ?? "";
+        const storedParseWarning = globalThis.localStorage?.getItem("resumeParseWarning") === "true";
 
         let resumeRecord = null;
 
@@ -509,6 +519,11 @@ function ResumeStudio({ resumeJson, setResumeJson, resumeId, setResumeId }) {
           globalThis.localStorage?.setItem("activeResumeId", activeResumeId);
         }
         setResumeJson(resumeRecord?.resume_json ?? {});
+        const incompleteParse = storedParseWarning || resumeRecord?.is_parsed === false || resumeRecord?.resume_json?.is_parsed === false;
+        setParseWarning(Boolean(incompleteParse));
+        if (!incompleteParse) {
+          globalThis.localStorage?.removeItem("resumeParseWarning");
+        }
         lastSavedSerializedRef.current = JSON.stringify(buildApiPayload(nextState, activeResumeId).resume_json);
       } catch {
         if (active) {
@@ -829,6 +844,150 @@ function ResumeStudio({ resumeJson, setResumeJson, resumeId, setResumeId }) {
     }
   };
 
+  const handleReparse = async () => {
+    if (!resumeId || reparseLoading) {
+      return;
+    }
+
+    setReparseLoading(true);
+    setErrorMessage("");
+
+    try {
+      const response = await reparseResume(resumeId);
+      const data = response?.data ?? {};
+      const nextResumeJson = data.parse_result ?? {};
+      const nextWarning = !Boolean(data.is_parsed ?? nextResumeJson.is_parsed ?? false);
+
+      setResumeJson(nextResumeJson);
+      setParseWarning(nextWarning);
+      if (nextWarning) {
+        globalThis.localStorage?.setItem("resumeParseWarning", "true");
+      } else {
+        globalThis.localStorage?.removeItem("resumeParseWarning");
+      }
+      setChatNotice("AI parsing was re-run.");
+    } catch {
+      setErrorMessage("Failed to re-run AI parsing.");
+    } finally {
+      setReparseLoading(false);
+    }
+  };
+
+  const submitChatUpdate = async () => {
+    const message = normalizeText(chatInput);
+    if (!message) {
+      return;
+    }
+
+    if (!resumeId) {
+      setChatError("Resume is not ready yet. Please wait and retry.");
+      return;
+    }
+
+    setChatLoading(true);
+    setChatError("");
+    setChatNotice("");
+
+    try {
+      const previousResume = buildApiPayload(studioState, resumeId).resume_json;
+      const previousStudio = JSON.parse(JSON.stringify(studioState));
+
+      const response = await chatUpdateResume({
+        message,
+        resumeId,
+      });
+
+      if (response?.data?.status === "error") {
+        setChatError(response?.data?.message || "Could not understand input");
+        return;
+      }
+
+      const updatedResume = response?.data?.updated_resume;
+      if (!updatedResume || typeof updatedResume !== "object") {
+        throw new Error("AI response is missing updated resume data");
+      }
+
+      const nextState = mapResumeToStudioState(updatedResume);
+      setLastChatSnapshot({
+        resumeJson: previousResume,
+        studioState: previousStudio,
+      });
+      setStudioState(nextState);
+      setResumeJson(updatedResume);
+      lastSavedSerializedRef.current = JSON.stringify(updatedResume);
+      setSaveStatus("Saved");
+      setChatInput("");
+      setChatNotice(response?.data?.message || "Resume updated successfully");
+    } catch (error) {
+      const messageFromApi = error?.response?.data?.detail;
+      setChatError(typeof messageFromApi === "string" ? messageFromApi : "AI update failed. Please try again.");
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  const undoLastChatUpdate = async () => {
+    if (!lastChatSnapshot || !resumeId) {
+      return;
+    }
+
+    setChatLoading(true);
+    setChatError("");
+
+    try {
+      await updateResume({
+        resume_id: resumeId,
+        resume_json: lastChatSnapshot.resumeJson,
+        title: normalizeText(lastChatSnapshot.resumeJson?.personal?.name) ? `${normalizeText(lastChatSnapshot.resumeJson.personal.name)} Resume` : "Resume",
+        summary: normalizeText(lastChatSnapshot.resumeJson?.personal?.summary),
+        status: "draft",
+      });
+
+      setStudioState(lastChatSnapshot.studioState);
+      setResumeJson(lastChatSnapshot.resumeJson);
+      lastSavedSerializedRef.current = JSON.stringify(lastChatSnapshot.resumeJson);
+      setSaveStatus("Saved");
+      setChatNotice("Last AI update was undone.");
+      setLastChatSnapshot(null);
+    } catch {
+      setChatError("Undo failed. Please try again.");
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  const downloadExport = async (format) => {
+    if (!resumeId || exportingFormat) {
+      return;
+    }
+
+    setExportingFormat(format);
+    setErrorMessage("");
+
+    try {
+      const response = await exportResumeFile({ resumeId, format });
+      const blob = new Blob([response.data]);
+      const url = globalThis.URL.createObjectURL(blob);
+
+      const disposition = response?.headers?.["content-disposition"] ?? "";
+      const fileMatch = disposition.match(/filename="?([^";]+)"?/i);
+      const fallbackName = `resume.${format}`;
+      const fileName = fileMatch?.[1] ?? fallbackName;
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      globalThis.URL.revokeObjectURL(url);
+    } catch {
+      setErrorMessage("Export failed. Please try again.");
+    } finally {
+      setExportingFormat("");
+    }
+  };
+
   const sectionSummaries = useMemo(
     () =>
       studioState.sections.map((section) => ({
@@ -840,9 +999,27 @@ function ResumeStudio({ resumeJson, setResumeJson, resumeId, setResumeId }) {
     [studioState.sections],
   );
 
+  const openRecruiterLens = () => {
+    globalThis.localStorage?.setItem("recruiterLens.jdDraft", jdDraft);
+    navigate("/recruiter-lens");
+  };
+
   return (
     <div className="min-h-screen bg-white">
       <div className="mx-auto max-w-[1600px] px-4 py-4 sm:px-6 sm:py-6">
+        {parseWarning ? (
+          <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900 shadow-sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-semibold">We couldn't fully extract your resume.</p>
+                <p className="text-sm">Please review and edit the content. You can re-run AI parsing if you want another pass.</p>
+              </div>
+              <Button variant="secondary" onClick={handleReparse} loading={reparseLoading} disabled={!resumeId || reparseLoading}>
+                Re-run AI Parsing
+              </Button>
+            </div>
+          </div>
+        ) : null}
         <header className="mb-4 flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <Badge className="w-fit">Resume Studio</Badge>
@@ -870,6 +1047,29 @@ function ResumeStudio({ resumeJson, setResumeJson, resumeId, setResumeId }) {
               <Menu className="mr-2 h-4 w-4" /> Sections
             </Button>
             <Button variant="secondary" onClick={() => navigate("/resume")}>Back</Button>
+            <Button
+              variant="secondary"
+              onClick={openRecruiterLens}
+              disabled={!resumeId}
+            >
+              Recruiter Lens
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => downloadExport("pdf")}
+              disabled={!resumeId || Boolean(exportingFormat)}
+            >
+              {exportingFormat === "pdf" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+              Export PDF
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => downloadExport("docx")}
+              disabled={!resumeId || Boolean(exportingFormat)}
+            >
+              {exportingFormat === "docx" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+              Export DOCX
+            </Button>
             <Button onClick={persistNow}>
               <Save className="mr-2 h-4 w-4" /> Save now
             </Button>
@@ -889,6 +1089,33 @@ function ResumeStudio({ resumeJson, setResumeJson, resumeId, setResumeId }) {
           />
 
           <main className="min-w-0 space-y-4">
+            <Card className="space-y-3 p-4">
+              <p className="text-sm font-semibold text-slate-900">AI Chat Update</p>
+              <p className="text-sm text-slate-600">Describe changes in natural language. The assistant will update resume JSON and re-render the editor.</p>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <input
+                  value={chatInput}
+                  onChange={(event) => setChatInput(event.target.value)}
+                  placeholder='Example: I built a fraud detection system using Python and ML'
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+                  disabled={chatLoading || loading}
+                />
+                <Button onClick={submitChatUpdate} disabled={chatLoading || loading || !normalizeText(chatInput)}>
+                  {chatLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Send
+                </Button>
+              </div>
+              {chatNotice ? <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{chatNotice}</div> : null}
+              {chatError ? <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{chatError}</div> : null}
+              {lastChatSnapshot ? (
+                <div className="flex justify-end">
+                  <Button variant="ghost" onClick={undoLastChatUpdate} disabled={chatLoading}>
+                    Undo last AI update
+                  </Button>
+                </div>
+              ) : null}
+            </Card>
+
             {loading ? (
               <Card className="flex items-center justify-center gap-3 p-6 text-sm text-slate-600">
                 <Loader2 className="h-4 w-4 animate-spin text-slate-500" />
@@ -932,7 +1159,13 @@ function ResumeStudio({ resumeJson, setResumeJson, resumeId, setResumeId }) {
             ) : null}
           </main>
 
-          <ResumeStudioAIPanel suggestions={suggestions} />
+          <ResumeStudioAIPanel
+            suggestions={suggestions}
+            jdDraft={jdDraft}
+            onJdDraftChange={setJdDraft}
+            onOpenRecruiterLens={openRecruiterLens}
+            resumeReady={Boolean(resumeId)}
+          />
         </div>
       </div>
     </div>

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -29,3 +31,19 @@ class RecruiterLensAnalyzeOut(BaseModel):
     structured_jd: dict
     match_details: dict
     metadata: dict
+
+
+class RecruiterLensAnalyzeRequest(BaseModel):
+    resume_id: str = Field(..., min_length=1)
+    job_description: str = Field(..., min_length=20)
+
+
+class RecruiterLensAnalyzeResponse(BaseModel):
+    score: int
+    confidence: float
+    breakdown: dict[str, float]
+    missing_skills: list[str]
+    matched_skills: list[str]
+    improvement_areas: list[str]
+    suggestions: list[str]
+    metadata: dict[str, Any] = Field(default_factory=dict)

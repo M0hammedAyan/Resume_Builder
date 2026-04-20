@@ -27,3 +27,13 @@ class InsightsAnalyzeOut(BaseModel):
     experience_level: int
     resume_score: int
     recommendations: list[str]
+
+
+class InsightsDashboardOut(BaseModel):
+    latest_score: int
+    score_history: list[int]
+    skill_coverage: dict[str, int]
+    top_missing_skills: list[str]
+    improvement_areas: list[str]
+    resume_strength: str
+    recommendations: list[str]

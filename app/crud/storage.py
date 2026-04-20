@@ -21,8 +21,16 @@ def create_resume(
     summary: str | None = None,
     status: str = "draft",
     resume_json: dict | None = None,
+    is_parsed: bool = False,
 ) -> Resume:
-    resume = Resume(user_id=user_id, title=title, summary=summary, status=status, resume_json=resume_json or {})
+    resume = Resume(
+        user_id=user_id,
+        title=title,
+        summary=summary,
+        status=status,
+        resume_json=resume_json or {},
+        is_parsed=is_parsed,
+    )
     db.add(resume)
     db.flush()
     return resume
