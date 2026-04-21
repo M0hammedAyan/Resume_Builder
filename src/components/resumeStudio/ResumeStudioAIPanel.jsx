@@ -10,11 +10,11 @@ function ResumeStudioAIPanel({
   resumeReady = false,
 }) {
   return (
-    <Card className="sticky top-6 hidden h-[calc(100vh-3rem)] overflow-y-auto p-4 lg:block">
+    <Card className="sticky top-6 hidden h-[calc(100vh-3rem)] overflow-y-auto border-slate-200/80 bg-white/90 p-4 lg:block">
       <div className="flex items-center justify-between gap-3">
         <div>
           <Badge>AI tools</Badge>
-          <h2 className="mt-3 text-lg font-semibold text-slate-900">Review and optimize</h2>
+          <h2 className="mt-3 text-lg font-semibold text-slate-950">Review and optimize</h2>
           <p className="mt-1 text-sm text-slate-500">Run role-match analysis and get targeted improvements.</p>
         </div>
       </div>
@@ -27,7 +27,7 @@ function ResumeStudioAIPanel({
             value={jdDraft}
             onChange={(event) => onJdDraftChange?.(event.target.value)}
             placeholder="Paste JD here..."
-            className="mt-3 min-h-[110px] w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+            className="mt-3 min-h-[110px] w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
           />
           <Button
             className="mt-3 w-full"
@@ -49,7 +49,7 @@ function ResumeStudioAIPanel({
           <div className="mt-3 space-y-2">
             {suggestions.length > 0 ? (
               suggestions.map((item) => (
-                <div key={item} className="rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-700">
+                <div key={item} className="rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-700 shadow-sm">
                   {item}
                 </div>
               ))

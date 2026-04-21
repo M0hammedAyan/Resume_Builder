@@ -55,6 +55,7 @@ def create_resume_record(payload: ResumeCreateIn, user_id: UUID = Query(...), db
         user_id=user_id,
         title=payload.title,
         summary=payload.summary,
+        selected_template=payload.selected_template,
         status=payload.status,
         resume_json=payload.resume_json,
     )
@@ -86,6 +87,7 @@ def modify_resume(resume_id: UUID, payload: ResumeUpdateIn, user_id: UUID = Quer
         resume=resume,
         title=payload.title,
         summary=payload.summary,
+        selected_template=payload.selected_template,
         status=payload.status,
         resume_json=payload.resume_json,
     )

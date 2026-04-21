@@ -54,6 +54,7 @@ export const createResume = async (resumePayload) => {
     title: resumePayload?.title ?? "Resume",
     summary: resumePayload?.summary ?? "",
     status: resumePayload?.status ?? "draft",
+    selected_template: resumePayload?.selected_template ?? resumePayload?.selectedTemplate ?? null,
     resume_json: resumePayload?.resume_json ?? resumePayload ?? {},
   };
 
@@ -116,7 +117,13 @@ export const updateResume = async (payload) => {
   const currentUser = await getCurrentUser();
   const response = await api.patch(
     `/resumes/${encodeURIComponent(payload.resume_id)}`,
-    { resume_json: payload.resume_json, title: payload.title, summary: payload.summary, status: payload.status },
+    {
+      resume_json: payload.resume_json,
+      title: payload.title,
+      summary: payload.summary,
+      status: payload.status,
+      selected_template: payload.selected_template,
+    },
     {
       params: { user_id: currentUser.data.id },
     },
@@ -142,6 +149,7 @@ export const createResumeRecord = async ({ userId, title, summary, resumeJson })
     {
       title,
       summary,
+      selected_template: resumeJson?.selected_template ?? null,
       resume_json: resumeJson,
       status: "draft",
     },
@@ -165,12 +173,23 @@ export const chatUpdateResume = async ({ message, resumeId }) => {
   return response;
 };
 
-export const exportResumeFile = async ({ resumeId, format }) => {
+export const chatAssistResume = async ({ message, resumeId, pendingIntent, pendingData }) => {
+  const response = await api.post("/ai/chat-assist", {
+    message,
+    resume_id: resumeId,
+    pending_intent: pendingIntent ?? null,
+    pending_data: pendingData ?? {},
+  });
+  return response;
+};
+
+export const exportResumeFile = async ({ resumeId, format, templateId }) => {
   const response = await api.post(
     "/resume/export",
     {
       resume_id: resumeId,
       format,
+      template_id: templateId,
     },
     {
       responseType: "blob",

@@ -168,6 +168,8 @@ CRITICAL RULES:
 - Reconstruct logical grouping
 - Do NOT merge multiple projects into one entry
 - Do NOT split one project into many fragments
+- DO NOT skip sections if data exists in text
+- DO NOT return empty arrays if section data exists
 - Include CGPA only if present in education
 - Do NOT hallucinate data
 - Leave fields empty ("" or []) if unsure
@@ -208,7 +210,8 @@ INSTRUCTIONS:
 1. Detect grouped information for education, projects, experience, and skills.
 2. If text looks tabular, combine related values into logical entries.
 3. Prioritize logical grouping over line breaks.
-4. Return exactly the JSON structure above.
+4. If multiple projects exist, return multiple project entries.
+5. Return exactly the JSON structure above.
 {correction_block}
 
 Resume text:
@@ -448,6 +451,51 @@ def fallback_resume(text: str) -> dict:
     }
 
 
+def _extract_skills_keywords(text: str) -> list[str]:
+    keywords = [
+        "python", "java", "javascript", "typescript", "react", "node", "fastapi", "flask", "django",
+        "opencv", "pytorch", "tensorflow", "numpy", "pandas", "sql", "postgresql", "mongodb", "docker",
+        "kubernetes", "aws", "azure", "gcp", "html", "css", "latex", "machine learning", "deep learning",
+        "nlp", "computer vision", "scikit-learn", "git",
+    ]
+    lowered = text.lower()
+    found: list[str] = []
+    for keyword in keywords:
+        pattern = rf"(?<![a-z0-9]){re.escape(keyword)}(?![a-z0-9])"
+        if re.search(pattern, lowered):
+            found.append(keyword)
+    return sorted(set(found))
+
+
+def _extract_project_keyword_entries(text: str) -> list[dict]:
+    entries: list[dict] = []
+    lines = [line.strip(" -•*\t") for line in text.split("\n") if line.strip()]
+    for line in lines:
+        lowered = line.lower()
+        if any(token in lowered for token in ("project", "built", "developed", "implemented", "created")):
+            entries.append({
+                "title": "Project",
+                "description": line,
+                "skills": _extract_skills_keywords(line),
+            })
+    return entries[:5]
+
+
+def minimal_parse(text: str) -> dict:
+    return {
+        "personal": {
+            "name": extract_name(text),
+            "email": extract_email(text),
+            "phone": extract_phone(text),
+        },
+        "education": [],
+        "experience": [],
+        "projects": _extract_project_keyword_entries(text),
+        "skills": _extract_skills_keywords(text),
+        "raw_text": text,
+    }
+
+
 def _has_meaningful_content(data: dict) -> bool:
     personal = data.get("personal") if isinstance(data.get("personal"), dict) else {}
     if any(str(personal.get(field, "")).strip() for field in ("name", "email", "phone")):
@@ -474,6 +522,7 @@ def _has_meaningful_content(data: dict) -> bool:
 
 def handle_upload(text: str) -> tuple[dict, bool]:
     """Parse resume safely for uploads without ever failing the caller."""
+    logger.info("RAW TEXT: %s", (text or "")[:1000])
     try:
         parsed = parse_resume_structured(text, use_ai=True)
     except Exception:
@@ -485,6 +534,11 @@ def handle_upload(text: str) -> tuple[dict, bool]:
     if not isinstance(parsed, dict):
         parsed = fallback_resume(text)
         is_parsed = False
+
+    if not is_parsed:
+        logger.warning("Structured parse too empty; applying minimal_parse fallback")
+        parsed = minimal_parse(text)
+        is_parsed = _has_meaningful_content(parsed)
 
     parsed["raw_text"] = text
     parsed["is_parsed"] = is_parsed

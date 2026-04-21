@@ -39,3 +39,48 @@ class AIChatUpdateOut(BaseModel):
     updated_resume: dict[str, Any]
     message: str
     applied_action: Optional[AIChatUpdateAction] = None
+
+
+StructuredIntent = Literal[
+    "add_project",
+    "add_experience",
+    "add_education",
+    "add_skill",
+    "update_summary",
+    "unknown",
+]
+
+
+class AIParseUpdateIn(BaseModel):
+    message: str = Field(..., min_length=1, max_length=2000)
+
+
+class AIParsedResumeData(BaseModel):
+    title: str = ""
+    description: str = ""
+    company: str = ""
+    institution: str = ""
+    degree: str = ""
+    skills: list[str] = Field(default_factory=list)
+
+
+class AIParseUpdateOut(BaseModel):
+    intent: StructuredIntent
+    data: dict[str, Any]
+
+
+class AIChatAssistIn(BaseModel):
+    message: str = Field(..., min_length=1, max_length=2000)
+    resume_id: str = Field(..., min_length=1)
+    pending_intent: str | None = None
+    pending_data: dict[str, Any] = Field(default_factory=dict)
+
+
+class AIChatAssistOut(BaseModel):
+    intent: str
+    suggested_update: dict[str, Any] | None = None
+    missing_fields: list[str] = Field(default_factory=list)
+    needs_clarification: bool = False
+    question: str | None = None
+    new_skills: list[str] = Field(default_factory=list)
+    confirmation_required: bool = False

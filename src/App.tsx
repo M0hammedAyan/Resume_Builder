@@ -6,6 +6,7 @@ import ResumeEntry from "./pages/ResumeEntry";
 import ResumeBuilder from "./pages/ResumeBuilder";
 import ResumeUpload from "./pages/ResumeUpload";
 import ResumeStudio from "./pages/ResumeStudio";
+import TemplatesPage from "./pages/TemplatesPage";
 import RecruiterLens from "./pages/RecruiterLens";
 import Insights from "./pages/Insights";
 import ExportPage from "./pages/ExportPage";
@@ -38,6 +39,18 @@ function App() {
           />
         }
       />
+      <Route
+        path="/templates"
+        element={
+          <TemplatesPage
+            resumeJson={resumeJson}
+            setResumeJson={setResumeJson}
+            resumeId={resumeId}
+            setResumeId={setResumeId}
+          />
+        }
+      />
+      <Route path="/resume/templates" element={<Navigate to="/templates" replace />} />
       <Route path="/recruiter-lens" element={<RecruiterLens />} />
       <Route path="/insights" element={<Insights />} />
       <Route path="/export" element={<ExportPage />} />

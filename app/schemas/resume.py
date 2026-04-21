@@ -47,3 +47,4 @@ class ResumeVersionCompareOut(BaseModel):
 class ResumeExportIn(BaseModel):
     resume_id: UUID
     format: Literal["pdf", "docx"]
+    template_id: str | None = None

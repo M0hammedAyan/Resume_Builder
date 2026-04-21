@@ -10,9 +10,9 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantClasses: Record<Variant, string> = {
   primary:
-    "bg-slate-900 text-white shadow-sm shadow-slate-900/15 hover:bg-slate-800 focus-visible:ring-slate-400",
+    "bg-slate-900 text-white shadow-sm shadow-slate-900/10 hover:bg-slate-800 focus-visible:ring-slate-400",
   secondary:
-    "bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 focus-visible:ring-slate-300",
+    "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 focus-visible:ring-slate-300",
   ghost: "bg-transparent text-slate-600 border border-transparent hover:bg-slate-100 focus-visible:ring-slate-300",
   danger: "bg-rose-600 text-white hover:bg-rose-500 focus-visible:ring-rose-300",
 };
@@ -29,7 +29,7 @@ export function Button({
     <motion.button
       whileTap={{ scale: 0.98 }}
       disabled={disabled || loading}
-      className={`inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold transition outline-none ring-offset-2 focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60 ${variantClasses[variant]} ${className}`}
+      className={`inline-flex items-center justify-center rounded-full px-4 py-2.5 text-sm font-semibold transition duration-200 outline-none ring-offset-2 focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60 ${variantClasses[variant]} ${className}`}
       {...props}
     >
       {loading ? (

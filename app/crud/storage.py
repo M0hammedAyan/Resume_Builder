@@ -19,6 +19,7 @@ def create_resume(
     user_id: UUID,
     title: str,
     summary: str | None = None,
+    selected_template: str | None = None,
     status: str = "draft",
     resume_json: dict | None = None,
     is_parsed: bool = False,
@@ -27,6 +28,7 @@ def create_resume(
         user_id=user_id,
         title=title,
         summary=summary,
+        selected_template=selected_template,
         status=status,
         resume_json=resume_json or {},
         is_parsed=is_parsed,
@@ -53,6 +55,7 @@ def update_resume(
     resume: Resume,
     title: str | None = None,
     summary: str | None = None,
+    selected_template: str | None = None,
     status: str | None = None,
     resume_json: dict | None = None,
 ) -> Resume:
@@ -60,6 +63,8 @@ def update_resume(
         resume.title = title
     if summary is not None:
         resume.summary = summary
+    if selected_template is not None:
+        resume.selected_template = selected_template
     if status is not None:
         resume.status = status
     if resume_json is not None:

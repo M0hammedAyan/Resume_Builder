@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Download, Loader2, Menu, Save } from "lucide-react";
-import { chatUpdateResume, createResumeRecord, exportResumeFile, getCurrentUser, getResumeById, listResumes, reparseResume, updateResume } from "../services/api.js";
+import { chatAssistResume, chatUpdateResume, createResumeRecord, exportResumeFile, getCurrentUser, getResumeById, listResumes, reparseResume, updateResume } from "../services/api.js";
 import ResumeStudioSidebar from "../components/resumeStudio/ResumeStudioSidebar.jsx";
 import EditableSection from "../components/resumeStudio/EditableSection.jsx";
-import ResumeStudioAIPanel from "../components/resumeStudio/ResumeStudioAIPanel.jsx";
+import AppSidebarNav from "../components/layout/AppSidebarNav";
 import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
 import { Card } from "../components/ui/Card";
@@ -102,6 +102,8 @@ const createStudioState = () => ({
 });
 
 const normalizeText = (value) => String(value ?? "").trim();
+
+const escapeStructuredValue = (value) => String(value ?? "").replace(/"/g, "").trim();
 
 const asItems = (items, factory) => {
   if (!Array.isArray(items) || items.length === 0) {
@@ -412,32 +414,6 @@ const isSectionEmpty = (section) =>
         ? section.items.every((item) => Object.values(item).every((value) => !normalizeText(value)))
         : !normalizeText(section.content);
 
-const emptySuggestionsForState = (studioState) => {
-  const suggestions = [];
-  const personal = studioState.sections.find((section) => section.id === "personal");
-  const skills = studioState.sections.find((section) => section.id === "skills");
-  const projects = studioState.sections.find((section) => section.id === "projects");
-  const experience = studioState.sections.find((section) => section.id === "experience");
-
-  if (personal && !normalizeText(personal.fields.summary)) {
-    suggestions.push("Add a short summary at the top for quick context.");
-  }
-
-  if (experience && (experience.items ?? []).length === 0) {
-    suggestions.push("Add one experience entry with a clear impact statement.");
-  }
-
-  if (skills && normalizeText(skills.content).split(",").filter(Boolean).length < 5) {
-    suggestions.push("List 5+ relevant skills to help the profile read stronger.");
-  }
-
-  if (projects && (projects.items ?? []).length === 0) {
-    suggestions.push("Add one project to show practical outcomes.");
-  }
-
-  return suggestions;
-};
-
 function ResumeStudio({ resumeJson, setResumeJson, resumeId, setResumeId }) {
   const navigate = useNavigate();
   const [studioState, setStudioState] = useState(() => createStudioState());
@@ -450,19 +426,22 @@ function ResumeStudio({ resumeJson, setResumeJson, resumeId, setResumeId }) {
   const [chatLoading, setChatLoading] = useState(false);
   const [chatNotice, setChatNotice] = useState("");
   const [chatError, setChatError] = useState("");
+  const [chatQuestion, setChatQuestion] = useState("");
+  const [chatPreview, setChatPreview] = useState(null);
+  const [selectedNewSkills, setSelectedNewSkills] = useState([]);
+  const [pendingIntent, setPendingIntent] = useState("");
+  const [pendingData, setPendingData] = useState({});
   const [lastChatSnapshot, setLastChatSnapshot] = useState(null);
   const [exportingFormat, setExportingFormat] = useState("");
-  const [jdDraft, setJdDraft] = useState(() => globalThis.localStorage?.getItem("recruiterLens.jdDraft") ?? "");
   const [parseWarning, setParseWarning] = useState(false);
   const [reparseLoading, setReparseLoading] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState("modern-minimal");
   const sectionRefs = useRef({});
   const hydratedRef = useRef(false);
   const lastSavedSerializedRef = useRef("");
   const saveSequenceRef = useRef(0);
   const saveTimeoutRef = useRef(null);
   const initialResumeRef = useRef({ resumeJson, resumeId });
-
-  const suggestions = useMemo(() => emptySuggestionsForState(studioState), [studioState]);
 
   useEffect(() => {
     let active = true;
@@ -518,6 +497,9 @@ function ResumeStudio({ resumeJson, setResumeJson, resumeId, setResumeId }) {
           setResumeId(activeResumeId);
           globalThis.localStorage?.setItem("activeResumeId", activeResumeId);
         }
+        const nextTemplate = resumeRecord?.selected_template || "modern-minimal";
+        setSelectedTemplate(nextTemplate);
+        globalThis.localStorage?.setItem("resumeSelectedTemplate", nextTemplate);
         setResumeJson(resumeRecord?.resume_json ?? {});
         const incompleteParse = storedParseWarning || resumeRecord?.is_parsed === false || resumeRecord?.resume_json?.is_parsed === false;
         setParseWarning(Boolean(incompleteParse));
@@ -887,13 +869,83 @@ function ResumeStudio({ resumeJson, setResumeJson, resumeId, setResumeId }) {
     setChatLoading(true);
     setChatError("");
     setChatNotice("");
+    setChatQuestion("");
+
+    try {
+      const response = await chatAssistResume({
+        message,
+        resumeId,
+        pendingIntent,
+        pendingData,
+      });
+
+      const assist = response?.data ?? {};
+
+      if (assist?.needs_clarification) {
+        const nextQuestion = assist?.question || "Can you share more details?";
+        setChatQuestion(nextQuestion);
+        setChatNotice(nextQuestion);
+        setPendingIntent(assist?.intent || pendingIntent || "add_project");
+        if (assist?.suggested_update && typeof assist.suggested_update === "object") {
+          setPendingData(assist.suggested_update);
+        }
+        setChatPreview(null);
+        setSelectedNewSkills([]);
+        setChatInput("");
+        return;
+      }
+
+      if (!assist?.suggested_update || !assist?.confirmation_required) {
+        setChatError("Could not generate a structured preview. Please add more detail.");
+        return;
+      }
+
+      setChatPreview(assist);
+      setSelectedNewSkills(Array.isArray(assist?.new_skills) ? assist.new_skills : []);
+      setPendingIntent("");
+      setPendingData({});
+      setChatNotice("Preview ready. Confirm to apply this update.");
+      setChatInput("");
+    } catch (error) {
+      const messageFromApi = error?.response?.data?.detail;
+      setChatError(typeof messageFromApi === "string" ? messageFromApi : "AI assistant failed. Please try again.");
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  const toggleNewSkill = (skill) => {
+    setSelectedNewSkills((prev) =>
+      prev.includes(skill)
+        ? prev.filter((item) => item !== skill)
+        : [...prev, skill],
+    );
+  };
+
+  const confirmChatPreview = async () => {
+    if (!chatPreview || !resumeId) {
+      return;
+    }
+
+    const suggested = chatPreview.suggested_update ?? {};
+    const title = escapeStructuredValue(suggested.title);
+    const description = escapeStructuredValue(suggested.description);
+    const fallbackSkills = Array.isArray(suggested.skills) ? suggested.skills : [];
+    const skillsToApply = selectedNewSkills.length > 0 ? selectedNewSkills : fallbackSkills;
+    const tech = escapeStructuredValue(skillsToApply.join(", "));
+
+    const structuredMessage = `ADD Project Title:"${title}" Description:"${description}" Tech:"${tech}"`;
+
+    setChatLoading(true);
+    setChatError("");
+    setChatNotice("");
 
     try {
       const previousResume = buildApiPayload(studioState, resumeId).resume_json;
       const previousStudio = JSON.parse(JSON.stringify(studioState));
 
       const response = await chatUpdateResume({
-        message,
+        message: structuredMessage,
         resumeId,
       });
 
@@ -907,6 +959,21 @@ function ResumeStudio({ resumeJson, setResumeJson, resumeId, setResumeId }) {
         throw new Error("AI response is missing updated resume data");
       }
 
+      if (selectedNewSkills.length > 0) {
+        const existingSkills = Array.isArray(updatedResume.skills) ? updatedResume.skills.map((item) => String(item).trim()).filter(Boolean) : [];
+        const mergedSkills = Array.from(new Set([...existingSkills, ...selectedNewSkills.map((item) => String(item).trim()).filter(Boolean)]));
+        updatedResume.skills = mergedSkills;
+
+        await updateResume({
+          resume_id: resumeId,
+          resume_json: updatedResume,
+          title: normalizeText(updatedResume?.personal?.name) ? `${normalizeText(updatedResume.personal.name)} Resume` : "Resume",
+          summary: normalizeText(updatedResume?.personal?.summary ?? updatedResume?.summary),
+          status: "draft",
+          selected_template: selectedTemplate,
+        });
+      }
+
       const nextState = mapResumeToStudioState(updatedResume);
       setLastChatSnapshot({
         resumeJson: previousResume,
@@ -917,6 +984,11 @@ function ResumeStudio({ resumeJson, setResumeJson, resumeId, setResumeId }) {
       lastSavedSerializedRef.current = JSON.stringify(updatedResume);
       setSaveStatus("Saved");
       setChatInput("");
+      setChatPreview(null);
+      setSelectedNewSkills([]);
+      setPendingIntent("");
+      setPendingData({});
+      setChatQuestion("");
       setChatNotice(response?.data?.message || "Resume updated successfully");
     } catch (error) {
       const messageFromApi = error?.response?.data?.detail;
@@ -965,7 +1037,7 @@ function ResumeStudio({ resumeJson, setResumeJson, resumeId, setResumeId }) {
     setErrorMessage("");
 
     try {
-      const response = await exportResumeFile({ resumeId, format });
+      const response = await exportResumeFile({ resumeId, format, templateId: selectedTemplate });
       const blob = new Blob([response.data]);
       const url = globalThis.URL.createObjectURL(blob);
 
@@ -1000,13 +1072,13 @@ function ResumeStudio({ resumeJson, setResumeJson, resumeId, setResumeId }) {
   );
 
   const openRecruiterLens = () => {
-    globalThis.localStorage?.setItem("recruiterLens.jdDraft", jdDraft);
     navigate("/recruiter-lens");
   };
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="mx-auto max-w-[1600px] px-4 py-4 sm:px-6 sm:py-6">
+    <div className="min-h-screen app-shell-gradient">
+      <AppSidebarNav />
+      <div className="mx-auto max-w-[1600px] px-4 py-4 sm:px-6 sm:py-6 lg:pl-64">
         {parseWarning ? (
           <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900 shadow-sm">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1020,11 +1092,11 @@ function ResumeStudio({ resumeJson, setResumeJson, resumeId, setResumeId }) {
             </div>
           </div>
         ) : null}
-        <header className="mb-4 flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-end sm:justify-between">
+        <header className="mb-4 flex flex-col gap-3 border-b border-slate-200/80 pb-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <Badge className="w-fit">Resume Studio</Badge>
             <div className="mt-3 flex items-center gap-3">
-              <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">Modern Resume Editor</h1>
+              <h1 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">Modern Resume Editor</h1>
               <span
                 className={`rounded-full border px-2.5 py-1 text-xs font-medium ${
                   saveStatus === "Saved"
@@ -1035,6 +1107,9 @@ function ResumeStudio({ resumeJson, setResumeJson, resumeId, setResumeId }) {
                 }`}
               >
                 {saveStatus}
+              </span>
+              <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600">
+                Template: {selectedTemplate}
               </span>
             </div>
             <p className="mt-2 max-w-2xl text-sm text-slate-500">
@@ -1053,6 +1128,9 @@ function ResumeStudio({ resumeJson, setResumeJson, resumeId, setResumeId }) {
               disabled={!resumeId}
             >
               Recruiter Lens
+            </Button>
+            <Button variant="secondary" onClick={() => navigate("/templates")}>
+              Templates
             </Button>
             <Button
               variant="secondary"
@@ -1076,7 +1154,7 @@ function ResumeStudio({ resumeJson, setResumeJson, resumeId, setResumeId }) {
           </div>
         </header>
 
-        <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)_280px]">
+        <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
           <ResumeStudioSidebar
             sections={sectionSummaries}
             activeSectionId={activeSectionId}
@@ -1089,32 +1167,129 @@ function ResumeStudio({ resumeJson, setResumeJson, resumeId, setResumeId }) {
           />
 
           <main className="min-w-0 space-y-4">
-            <Card className="space-y-3 p-4">
-              <p className="text-sm font-semibold text-slate-900">AI Chat Update</p>
-              <p className="text-sm text-slate-600">Describe changes in natural language. The assistant will update resume JSON and re-render the editor.</p>
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <input
-                  value={chatInput}
-                  onChange={(event) => setChatInput(event.target.value)}
-                  placeholder='Example: I built a fraud detection system using Python and ML'
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
-                  disabled={chatLoading || loading}
-                />
-                <Button onClick={submitChatUpdate} disabled={chatLoading || loading || !normalizeText(chatInput)}>
-                  {chatLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Send
-                </Button>
-              </div>
-              {chatNotice ? <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{chatNotice}</div> : null}
-              {chatError ? <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{chatError}</div> : null}
-              {lastChatSnapshot ? (
-                <div className="flex justify-end">
-                  <Button variant="ghost" onClick={undoLastChatUpdate} disabled={chatLoading}>
-                    Undo last AI update
+            <div className="xl:hidden">
+              <Card className="space-y-3 p-4">
+                <p className="text-sm font-semibold text-slate-900">AI Chat Update</p>
+                <p className="text-sm text-slate-600">Describe changes in natural language. The assistant will update resume JSON and re-render the editor.</p>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <input
+                    value={chatInput}
+                    onChange={(event) => setChatInput(event.target.value)}
+                    placeholder='Example: I built a fraud detection system using Python and ML'
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                    disabled={chatLoading || loading}
+                  />
+                  <Button onClick={submitChatUpdate} disabled={chatLoading || loading || !normalizeText(chatInput)}>
+                    {chatLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Send
                   </Button>
                 </div>
-              ) : null}
-            </Card>
+                {chatQuestion ? <div className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700">{chatQuestion}</div> : null}
+                {chatPreview?.suggested_update ? (
+                  <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                    <p className="text-sm font-semibold text-slate-900">Project Preview</p>
+                    <div className="space-y-1 text-sm text-slate-700">
+                      <p><span className="font-medium text-slate-900">Title:</span> {chatPreview.suggested_update.title || "-"}</p>
+                      <p><span className="font-medium text-slate-900">Description:</span> {chatPreview.suggested_update.description || "-"}</p>
+                    </div>
+                    {Array.isArray(chatPreview.new_skills) && chatPreview.new_skills.length > 0 ? (
+                      <div className="space-y-2">
+                        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">New skills detected</p>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {chatPreview.new_skills.map((skill) => (
+                            <label key={skill} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-700">
+                              <input
+                                type="checkbox"
+                                checked={selectedNewSkills.includes(skill)}
+                                onChange={() => toggleNewSkill(skill)}
+                              />
+                              {skill}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                    <div className="flex justify-end">
+                      <Button onClick={confirmChatPreview} disabled={chatLoading}>Confirm Add Project</Button>
+                    </div>
+                  </div>
+                ) : null}
+                {chatNotice ? <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{chatNotice}</div> : null}
+                {chatError ? <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{chatError}</div> : null}
+                {lastChatSnapshot ? (
+                  <div className="flex justify-end">
+                    <Button variant="ghost" onClick={undoLastChatUpdate} disabled={chatLoading}>
+                      Undo last AI update
+                    </Button>
+                  </div>
+                ) : null}
+              </Card>
+            </div>
+
+            <div className="floating-chat-shell hidden xl:block">
+              <Card className="floating-chat-panel w-[24rem] space-y-3 border-slate-200/80 bg-white/90 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">AI Chat Update</p>
+                    <p className="text-xs text-slate-500">Floating assistant</p>
+                  </div>
+                  <Badge tone="neutral">Live</Badge>
+                </div>
+                <p className="text-sm text-slate-600">Describe changes in natural language. The assistant will update resume JSON and re-render the editor.</p>
+                <div className="flex flex-col gap-2">
+                  <input
+                    value={chatInput}
+                    onChange={(event) => setChatInput(event.target.value)}
+                    placeholder='Example: I built a fraud detection system using Python and ML'
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                    disabled={chatLoading || loading}
+                  />
+                  <Button onClick={submitChatUpdate} disabled={chatLoading || loading || !normalizeText(chatInput)}>
+                    {chatLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Send update
+                  </Button>
+                </div>
+                {chatQuestion ? <div className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700">{chatQuestion}</div> : null}
+                {chatPreview?.suggested_update ? (
+                  <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                    <p className="text-sm font-semibold text-slate-900">Project Preview</p>
+                    <div className="space-y-1 text-sm text-slate-700">
+                      <p><span className="font-medium text-slate-900">Title:</span> {chatPreview.suggested_update.title || "-"}</p>
+                      <p><span className="font-medium text-slate-900">Description:</span> {chatPreview.suggested_update.description || "-"}</p>
+                    </div>
+                    {Array.isArray(chatPreview.new_skills) && chatPreview.new_skills.length > 0 ? (
+                      <div className="space-y-2">
+                        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">New skills detected</p>
+                        <div className="grid gap-2">
+                          {chatPreview.new_skills.map((skill) => (
+                            <label key={skill} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-700">
+                              <input
+                                type="checkbox"
+                                checked={selectedNewSkills.includes(skill)}
+                                onChange={() => toggleNewSkill(skill)}
+                              />
+                              {skill}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                    <div className="flex justify-end">
+                      <Button onClick={confirmChatPreview} disabled={chatLoading}>Confirm Add Project</Button>
+                    </div>
+                  </div>
+                ) : null}
+                {chatNotice ? <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{chatNotice}</div> : null}
+                {chatError ? <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{chatError}</div> : null}
+                {lastChatSnapshot ? (
+                  <div className="flex justify-end">
+                    <Button variant="ghost" onClick={undoLastChatUpdate} disabled={chatLoading}>
+                      Undo last AI update
+                    </Button>
+                  </div>
+                ) : null}
+              </Card>
+            </div>
 
             {loading ? (
               <Card className="flex items-center justify-center gap-3 p-6 text-sm text-slate-600">
@@ -1159,13 +1334,6 @@ function ResumeStudio({ resumeJson, setResumeJson, resumeId, setResumeId }) {
             ) : null}
           </main>
 
-          <ResumeStudioAIPanel
-            suggestions={suggestions}
-            jdDraft={jdDraft}
-            onJdDraftChange={setJdDraft}
-            onOpenRecruiterLens={openRecruiterLens}
-            resumeReady={Boolean(resumeId)}
-          />
         </div>
       </div>
     </div>

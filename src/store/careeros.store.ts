@@ -178,7 +178,7 @@ export const useCareerOSStore = create<CareerOSStore>((set) => ({
     }),
 
   // Template
-  selectedTemplate: 'template1',
+  selectedTemplate: 'modern-minimal',
   setSelectedTemplate: (template) => set({ selectedTemplate: template }),
   templateSettings: {
     font: 'inter',

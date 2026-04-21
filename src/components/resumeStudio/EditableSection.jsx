@@ -28,7 +28,7 @@ function InlineEditableField({ value, placeholder, multiline = false, onCommit, 
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           onBlur={commit}
-          className={`w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none ring-2 ring-slate-200 focus:border-slate-400 focus:ring-slate-300 ${className}`}
+          className={`w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none ring-2 ring-slate-200 focus:border-slate-400 focus:ring-slate-300 ${className}`}
           rows={3}
         />
       );
@@ -51,7 +51,7 @@ function InlineEditableField({ value, placeholder, multiline = false, onCommit, 
             setEditing(false);
           }
         }}
-        className={`w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none ring-2 ring-slate-200 focus:border-slate-400 focus:ring-slate-300 ${className}`}
+        className={`w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none ring-2 ring-slate-200 focus:border-slate-400 focus:ring-slate-300 ${className}`}
       />
     );
   }
@@ -60,7 +60,7 @@ function InlineEditableField({ value, placeholder, multiline = false, onCommit, 
     <button
       type="button"
       onClick={() => setEditing(true)}
-      className={`w-full rounded-xl border border-transparent px-3 py-2 text-left transition hover:border-slate-200 hover:bg-slate-50 ${className}`}
+      className={`w-full rounded-2xl border border-transparent px-3 py-2 text-left transition hover:border-slate-200 hover:bg-slate-50 ${className}`}
     >
       <span className={`block whitespace-pre-wrap text-sm leading-6 ${value?.trim() ? "text-slate-900" : `text-slate-400 ${labelClassName}`}`}>
         {value?.trim() ? value : placeholder}
@@ -93,7 +93,7 @@ const EditableSection = forwardRef(function EditableSection(
     <article
       ref={ref}
       id={section.id}
-      className={`scroll-mt-6 rounded-3xl border bg-white p-5 shadow-sm shadow-slate-200/60 transition ${
+      className={`scroll-mt-6 rounded-[1.75rem] border bg-white p-5 shadow-sm shadow-slate-200/60 transition ${
         isActive ? "border-slate-300 ring-1 ring-slate-200" : "border-slate-200 hover:border-slate-300"
       }`}
       onClick={onSelect}
@@ -113,7 +113,7 @@ const EditableSection = forwardRef(function EditableSection(
                 event.stopPropagation();
                 onRenameSection(section.id);
               }}
-              className="rounded-lg border border-slate-200 bg-white p-2 text-slate-500 transition hover:bg-slate-50"
+              className="rounded-xl border border-slate-200 bg-white p-2 text-slate-500 transition hover:bg-slate-50"
               aria-label="Rename section"
             >
               <PencilLine className="h-4 w-4" />
@@ -131,7 +131,7 @@ const EditableSection = forwardRef(function EditableSection(
                   event.stopPropagation();
                   onMoveSection(section.id, "up");
                 }}
-                className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 transition hover:bg-slate-50"
+                className="rounded-xl border border-slate-200 bg-white p-2 text-slate-600 transition hover:bg-slate-50"
                 aria-label="Move section up"
               >
                 <ArrowUp className="h-4 w-4" />
@@ -142,7 +142,7 @@ const EditableSection = forwardRef(function EditableSection(
                   event.stopPropagation();
                   onMoveSection(section.id, "down");
                 }}
-                className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 transition hover:bg-slate-50"
+                className="rounded-xl border border-slate-200 bg-white p-2 text-slate-600 transition hover:bg-slate-50"
                 aria-label="Move section down"
               >
                 <ArrowDown className="h-4 w-4" />
@@ -156,7 +156,7 @@ const EditableSection = forwardRef(function EditableSection(
                 event.stopPropagation();
                 onDeleteSection(section.id);
               }}
-              className="rounded-lg border border-rose-200 bg-white p-2 text-rose-600 transition hover:bg-rose-50"
+              className="rounded-xl border border-rose-200 bg-white p-2 text-rose-600 transition hover:bg-rose-50"
               aria-label="Delete section"
             >
               <Trash2 className="h-4 w-4" />
@@ -210,7 +210,7 @@ const EditableSection = forwardRef(function EditableSection(
               </div>
             ) : null}
             {section.items.map((item) => (
-              <div key={item.id} className="rounded-2xl border border-slate-200 p-4">
+              <div key={item.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="grid gap-3 sm:grid-cols-3">
                   <InlineEditableField value={item.institution} placeholder="Institution" onCommit={(next) => onUpdateListItem(section.id, item.id, "institution", next)} />
                   <InlineEditableField value={item.degree} placeholder="Degree" onCommit={(next) => onUpdateListItem(section.id, item.id, "degree", next)} />
@@ -223,7 +223,7 @@ const EditableSection = forwardRef(function EditableSection(
                       event.stopPropagation();
                       onRemoveListItem(section.id, item.id);
                     }}
-                    className="rounded-lg border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
+                    className="rounded-full border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
                   >
                     Remove
                   </button>
@@ -236,7 +236,7 @@ const EditableSection = forwardRef(function EditableSection(
                 event.stopPropagation();
                 onAddListItem(section.id);
               }}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              className="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
             >
               + Add education
             </button>
@@ -252,7 +252,7 @@ const EditableSection = forwardRef(function EditableSection(
             ) : null}
 
             {section.items.map((item) => (
-              <div key={item.id} className="rounded-2xl border border-slate-200 p-4">
+              <div key={item.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="grid gap-3 sm:grid-cols-2">
                   <InlineEditableField
                     value={item.title}

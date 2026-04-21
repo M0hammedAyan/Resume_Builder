@@ -53,7 +53,7 @@ function ResumeStudioSidebar({
       ) : null}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-30 flex w-[min(88vw,20rem)] flex-col border-r border-slate-200 bg-white/95 p-4 shadow-2xl shadow-slate-900/10 backdrop-blur transition-transform duration-200 md:sticky md:top-6 md:z-auto md:h-[calc(100vh-3rem)] md:w-auto md:translate-x-0 md:rounded-3xl md:border md:shadow-sm ${
+        className={`fixed inset-y-0 left-0 z-30 flex w-[min(88vw,20rem)] flex-col border-r border-slate-200 bg-white/95 p-4 shadow-2xl shadow-slate-900/10 backdrop-blur transition-transform duration-200 md:sticky md:top-6 md:z-auto md:h-[calc(100vh-3rem)] md:w-auto md:translate-x-0 md:rounded-[1.75rem] md:border md:shadow-sm ${
           isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
       >

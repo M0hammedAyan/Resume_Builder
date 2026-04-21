@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { getCurrentUser, getResumeById, listResumes } from "../services/api.js";
 import { apiService } from "../services/api.ts";
+import AppSidebarNav from "../components/layout/AppSidebarNav";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
@@ -98,17 +99,19 @@ function RecruiterLens() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-8 sm:py-10">
-      <div className="mx-auto max-w-5xl space-y-4">
-        <div className="flex items-center justify-between gap-3">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.08),transparent_28%),linear-gradient(180deg,#f8fafc_0%,#eef2f7_100%)] px-4 py-8 sm:py-10">
+      <AppSidebarNav />
+      <div className="mx-auto max-w-5xl space-y-4 lg:pl-64">
+        <div className="flex items-end justify-between gap-3">
           <div>
             <Badge className="w-fit">Recruiter Lens</Badge>
-            <h1 className="mt-2 text-2xl font-bold text-slate-900">ATS and Role Match Review</h1>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">ATS and Role Match Review</h1>
+            <p className="mt-2 max-w-2xl text-sm text-slate-500">A calmer, denser analysis surface with the same backend scoring model.</p>
           </div>
           <Button variant="secondary" onClick={() => navigate("/resume/studio")}>Back to Studio</Button>
         </div>
 
-        <Card className="space-y-3">
+        <Card className="space-y-4">
           {loading ? (
             <div className="flex items-center gap-2 text-sm text-slate-600">
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -121,7 +124,7 @@ function RecruiterLens() {
                 value={jobDescription}
                 onChange={(event) => setJobDescription(event.target.value)}
                 placeholder="Paste job description..."
-                className="min-h-[180px] w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+                className="min-h-[190px] w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
               />
               <div className="flex gap-2">
                 <Button onClick={handleAnalyze} disabled={!canAnalyze || analyzing} loading={analyzing}>
@@ -130,7 +133,7 @@ function RecruiterLens() {
                 <Button variant="ghost" onClick={() => navigate("/insights")}>Go to Insights</Button>
               </div>
               {analyzing ? (
-                <div className="flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-700">
+                <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Analyzing...
                 </div>
@@ -141,14 +144,14 @@ function RecruiterLens() {
           {errorMessage ? <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{errorMessage}</p> : null}
 
           {!result && !loading ? (
-            <div className="rounded-xl border border-dashed border-slate-300 bg-white px-4 py-6 text-center text-sm text-slate-600">
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-6 text-center text-sm text-slate-600">
               Paste a job description to start analysis.
             </div>
           ) : null}
 
           {result ? (
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl border border-slate-200 bg-white p-4 sm:col-span-2">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:col-span-2">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Match Score</p>
                 <div className="mt-2 flex items-end justify-between gap-4">
                   <p className="text-4xl font-bold text-slate-900">{Math.round(Number(result.score ?? 0))}%</p>
@@ -161,24 +164,24 @@ function RecruiterLens() {
                   />
                 </div>
               </div>
-              <div className="rounded-xl border border-slate-200 bg-white p-3">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Hard Skills</p>
                 <p className="mt-2 text-2xl font-bold text-slate-900">{Math.round(Number(result.breakdown?.hard_skills ?? 0))}%</p>
               </div>
-              <div className="rounded-xl border border-slate-200 bg-white p-3">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Experience</p>
                 <p className="mt-2 text-2xl font-bold text-slate-900">{Math.round(Number(result.breakdown?.experience ?? 0))}%</p>
               </div>
-              <div className="rounded-xl border border-slate-200 bg-white p-3">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Keywords</p>
                 <p className="mt-2 text-2xl font-bold text-slate-900">{Math.round(Number(result.breakdown?.keywords ?? 0))}%</p>
               </div>
-              <div className="rounded-xl border border-slate-200 bg-white p-3">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Missing Skills</p>
                 {Array.isArray(result.missing_skills) && result.missing_skills.length > 0 ? (
                   <div className="mt-2 flex flex-wrap gap-2">
                     {result.missing_skills.map((skill) => (
-                      <span key={skill} className="rounded-full bg-rose-100 px-2 py-1 text-xs font-medium text-rose-700">
+                      <span key={skill} className="rounded-full bg-rose-50 px-2 py-1 text-xs font-medium text-rose-700">
                         {skill}
                       </span>
                     ))}
@@ -187,7 +190,7 @@ function RecruiterLens() {
                   <p className="mt-2 text-sm text-slate-700">None</p>
                 )}
               </div>
-              <div className="rounded-xl border border-slate-200 bg-white p-3 sm:col-span-2">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:col-span-2">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Suggestions</p>
                 {Array.isArray(result.suggestions) && result.suggestions.length > 0 ? (
                   <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700">

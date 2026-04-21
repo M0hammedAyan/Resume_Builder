@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class ResumeCreateIn(BaseModel):
     title: str = Field(..., min_length=1)
     summary: str | None = None
+    selected_template: str | None = None
     resume_json: dict[str, Any] = Field(default_factory=dict)
     status: str = "draft"
 
@@ -17,6 +18,7 @@ class ResumeCreateIn(BaseModel):
 class ResumeUpdateIn(BaseModel):
     title: str | None = None
     summary: str | None = None
+    selected_template: str | None = None
     resume_json: dict[str, Any] | None = None
     status: str | None = None
 
@@ -46,6 +48,7 @@ class ResumeOut(BaseModel):
     user_id: UUID
     title: str
     summary: str | None = None
+    selected_template: str | None = None
     resume_json: dict[str, Any]
     is_parsed: bool = False
     status: str

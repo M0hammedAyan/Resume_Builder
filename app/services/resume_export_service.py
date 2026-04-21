@@ -1,166 +1,211 @@
 from __future__ import annotations
 
 import os
-import importlib
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Any
 from uuid import UUID
 
-from jinja2 import Environment, FileSystemLoader, select_autoescape
 from sqlalchemy.orm import Session
 
-from app.models.generated_output import GeneratedOutput
-from app.models.structured_event import StructuredEvent
+from app.models.resume import Resume
 from app.models.user import User
+from app.services.resume_templates import build_resume_payload, get_template_spec, normalize_template_id, render_resume_html
 
 BASE_DIR = Path(__file__).resolve().parents[1]
-TEMPLATE_DIR = BASE_DIR / "templates" / "resume"
-
-TEMPLATE_MAP = {
-    "ats-minimal": "ats_minimal.html",
-    "ats_minimal": "ats_minimal.html",
-    "modern-clean": "modern_clean.html",
-    "modern_clean": "modern_clean.html",
-    "technical-profile": "technical_profile.html",
-    "technical_profile": "technical_profile.html",
-}
 
 
-env = Environment(
-    loader=FileSystemLoader(str(TEMPLATE_DIR)),
-    autoescape=select_autoescape(["html", "xml"]),
-)
+def _load_latest_resume(db: Session, user_id: UUID) -> Resume | None:
+    return (
+        db.query(Resume)
+        .filter(Resume.user_id == user_id)
+        .order_by(Resume.updated_at.desc())
+        .first()
+    )
 
 
-def _build_resume_data(db: Session, user_id: UUID) -> dict[str, Any]:
-    """Assemble resume data payload from latest generated output and fallback events."""
+def _resolve_resume_payload(db: Session, user_id: UUID, template_id: str | None = None) -> tuple[dict[str, Any], str]:
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise ValueError("User not found")
 
-    latest_output = (
-        db.query(GeneratedOutput)
-        .filter(GeneratedOutput.user_id == user_id, GeneratedOutput.output_type == "resume")
-        .order_by(GeneratedOutput.created_at.desc())
-        .first()
-    )
+    resume = _load_latest_resume(db, user_id)
+    if resume:
+        resume_json = dict(resume.resume_json or {})
+        selected_template = normalize_template_id(template_id or resume.selected_template)
+        return resume_json, selected_template
 
-    events_query = (
-        db.query(StructuredEvent)
-        .filter(StructuredEvent.user_id == user_id)
-        .order_by(StructuredEvent.timestamp.desc())
-        .limit(5)
-        .all()
-    )
-
-    fallback_events = [
-        {
-            "id": str(item.id),
-            "role_context": item.role_context,
-            "domain": item.domain,
-            "action": item.action,
-            "tools": item.tools,
-        }
-        for item in events_query
-    ]
-
-    if latest_output and isinstance(latest_output.content, dict):
-        content = latest_output.content
-        bullets = [str(bullet) for bullet in content.get("bullets", []) if str(bullet).strip()]
-        selected_events = content.get("selected_events", fallback_events)
-        evaluation = content.get("evaluation", {})
-        ats_score = float(evaluation.get("overall_score", latest_output.ats_score))
-    else:
-        bullets = [item["action"] for item in fallback_events]
-        selected_events = fallback_events
-        ats_score = 0.0
-
-    summary = (
-        "Built measurable outcomes across product, analytics, and engineering contexts with a focus on scalable impact."
-    )
-
-    return {
-        "user": {
-            "name": user.name,
-            "email": user.email,
-            "experience_level": user.experience_level,
+    fallback_resume = {
+        "personal": {
+            "name": user.name or "CareerOS Candidate",
+            "email": user.email or "",
+            "summary": "",
+            "links": [],
         },
-        "target_roles": user.target_roles or [],
-        "summary": summary,
-        "bullets": bullets,
-        "events": selected_events,
-        "ats_score": round(ats_score, 2),
+        "experience": [],
+        "projects": [],
+        "education": [],
+        "skills": [],
+        "optional_sections": [],
     }
+    return fallback_resume, normalize_template_id(template_id)
 
 
-def render_resume(template_name: str, data: dict[str, Any]) -> str:
-    """Render resume HTML from a named Jinja2 template and structured data."""
-    template_key = template_name.strip().lower()
-    template_file = TEMPLATE_MAP.get(template_key)
-    if not template_file:
-        raise ValueError("Unknown template. Use ats-minimal, modern-clean, or technical-profile")
-    template = env.get_template(template_file)
-    return template.render(**data)
+def _file_name_from_resume(resume_json: dict[str, Any], suffix: str) -> str:
+    payload = build_resume_payload(resume_json)
+    base = str(payload.get("name") or "resume").strip() or "resume"
+    safe = "".join(char if char.isalnum() else "_" for char in base).strip("_") or "resume"
+    return f"{safe}.{suffix}"
 
 
-def export_resume_pdf(db: Session, user_id: UUID, template_name: str) -> tuple[str, str]:
+def export_resume_pdf(db: Session, user_id: UUID, template_name: str | None = None) -> tuple[str, str]:
     """Render selected template and export to PDF using WeasyPrint."""
     try:
         from weasyprint import HTML
     except Exception as exc:  # noqa: BLE001
         raise RuntimeError("WeasyPrint is not available. Install dependencies and system libraries.") from exc
 
-    data = _build_resume_data(db, user_id)
-    html = render_resume(template_name, data)
+    resume_json, selected_template = _resolve_resume_payload(db, user_id, template_name)
+    html = render_resume_html(selected_template, resume_json)
 
     with NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
         HTML(string=html).write_pdf(tmp.name)
         file_path = tmp.name
 
-    download_name = f"careeros_{user_id}_resume.pdf"
+    download_name = _file_name_from_resume(resume_json, "pdf")
     return file_path, download_name
 
 
-def export_resume_docx(db: Session, user_id: UUID, template_name: str) -> tuple[str, str]:
+def export_resume_docx(db: Session, user_id: UUID, template_name: str | None = None) -> tuple[str, str]:
     """Export resume to DOCX using python-docx with template-aware section styling."""
     try:
-        Document = getattr(importlib.import_module("docx"), "Document")
+        from docx import Document
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
+        from docx.shared import Pt
     except Exception as exc:  # noqa: BLE001
         raise RuntimeError("python-docx is not available. Install required dependencies.") from exc
 
-    data = _build_resume_data(db, user_id)
+    resume_json, selected_template = _resolve_resume_payload(db, user_id, template_name)
+    template = get_template_spec(selected_template)
+    payload = build_resume_payload(resume_json)
+
     doc = Document()
+    section = doc.sections[0]
+    section.top_margin = Pt(54)
+    section.bottom_margin = Pt(54)
+    section.left_margin = Pt(54)
+    section.right_margin = Pt(54)
 
-    user = data["user"]
-    doc.add_heading(user.get("name") or "CareerOS Candidate", 0)
-    meta = " | ".join([value for value in [user.get("email"), user.get("experience_level")] if value])
-    if meta:
-        doc.add_paragraph(meta)
+    normal_style = doc.styles["Normal"]
+    normal_style.font.name = template.font_family_body.split(",")[0].strip()
+    normal_style.font.size = Pt(template.font_size_body)
 
-    if data.get("target_roles"):
-        doc.add_paragraph("Target Roles: " + ", ".join(data["target_roles"]))
+    title = doc.add_paragraph()
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER if template.header_style == "centered" else WD_ALIGN_PARAGRAPH.LEFT
+    title_run = title.add_run(str(payload.get("name") or "CareerOS Candidate"))
+    title_run.bold = True
+    title_run.font.name = template.font_family_heading.split(",")[0].strip()
+    title_run.font.size = Pt(template.font_size_name)
 
-    doc.add_heading("Summary", level=1)
-    doc.add_paragraph(str(data.get("summary", "")))
+    if payload.get("title"):
+        title_line = doc.add_paragraph()
+        title_line.alignment = title.alignment
+        title_line.add_run(str(payload["title"]))
 
-    if template_name.lower() == "technical-profile":
-        doc.add_heading("Technical Event Context", level=1)
-        for event in data.get("events", []):
-            line = f"[{event.get('domain', 'General')}] {event.get('action', '')}"
-            doc.add_paragraph(line)
+    contact_parts = [value for value in [payload.get("email"), payload.get("phone"), payload.get("location")] if value]
+    contact_parts.extend(payload.get("links", []))
+    if contact_parts:
+        contact = doc.add_paragraph()
+        contact.alignment = title.alignment
+        contact.add_run(" | ".join(str(item) for item in contact_parts if str(item).strip()))
 
-    doc.add_heading("Selected Achievements", level=1)
-    for bullet in data.get("bullets", []):
-        doc.add_paragraph(str(bullet), style="List Bullet")
+    def add_paragraph_text(text: str) -> None:
+        text = text.strip()
+        if text:
+            doc.add_paragraph(text)
 
-    doc.add_paragraph(f"ATS Score: {data.get('ats_score', 0)}")
+    def add_section_heading(text: str) -> None:
+        heading = doc.add_paragraph()
+        run = heading.add_run(text)
+        run.bold = True
+        run.font.name = template.font_family_heading.split(",")[0].strip()
+        run.font.size = Pt(template.font_size_heading)
+
+    def add_entry(entry: dict[str, Any] | str, fields: tuple[str, ...]) -> None:
+        if isinstance(entry, str):
+            add_paragraph_text(entry)
+            return
+
+        heading_parts = [str(entry.get(field, "")).strip() for field in fields if str(entry.get(field, "")).strip()]
+        if heading_parts:
+            doc.add_paragraph(" · ".join(heading_parts))
+
+        description = str(entry.get("description") or entry.get("summary") or "").strip()
+        if description:
+            add_paragraph_text(description)
+
+        bullets = entry.get("bullets") if isinstance(entry.get("bullets"), list) else []
+        for bullet in bullets:
+            bullet_text = str(bullet).strip()
+            if bullet_text:
+                doc.add_paragraph(bullet_text, style="List Bullet")
+
+    if payload.get("summary"):
+        add_section_heading("Summary")
+        add_paragraph_text(str(payload["summary"]))
+
+    section_groups: list[tuple[str, list[Any], tuple[str, ...]]] = [
+        ("Experience", payload.get("experience", []), ("title", "company", "duration")),
+        ("Projects", payload.get("projects", []), ("title", "company", "duration")),
+        ("Education", payload.get("education", []), ("institution", "degree", "year")),
+    ]
+
+    if template.layout != "two-column":
+        section_groups.append(("Skills", payload.get("skills", []), ()))
+
+    for section_title, items, fields in section_groups:
+        if not items:
+            continue
+        add_section_heading(section_title)
+        if section_title == "Skills":
+            skills = [str(item).strip() for item in items if str(item).strip()]
+            if template.skills_style == "tags":
+                add_paragraph_text(", ".join(skills))
+            elif template.skills_style == "grouped":
+                add_paragraph_text(" · ".join(skills))
+            else:
+                for skill in skills:
+                    add_paragraph_text(skill)
+            continue
+
+        for entry in items:
+            add_entry(entry, fields)
+
+    if template.layout == "two-column" and payload.get("skills"):
+        add_section_heading("Skills")
+        skills = [str(item).strip() for item in payload.get("skills", []) if str(item).strip()]
+        if template.skills_style == "tags":
+            add_paragraph_text(", ".join(skills))
+        elif template.skills_style == "grouped":
+            add_paragraph_text(" · ".join(skills))
+        else:
+            for skill in skills:
+                add_paragraph_text(skill)
+
+    for section_item in payload.get("optional_sections", []):
+        title_text = str(section_item.get("title") or section_item.get("key") or "Additional Section").strip()
+        items = section_item.get("items") if isinstance(section_item.get("items"), list) else []
+        if not items:
+            continue
+        add_section_heading(title_text)
+        for item in items:
+            add_paragraph_text(str(item))
 
     with NamedTemporaryFile(delete=False, suffix=".docx") as tmp:
         doc.save(tmp.name)
         file_path = tmp.name
 
-    download_name = f"careeros_{user_id}_resume.docx"
+    download_name = _file_name_from_resume(resume_json, "docx")
     return file_path, download_name
 
 

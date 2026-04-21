@@ -13,7 +13,7 @@ _GEMINI_TASKS = {"analysis", "jd_matching", "resume_parsing"}
 
 
 def route_ai_task(task_type: str, prompt: str) -> str:
-    """Route task to Gemma or Gemini with cross-provider fallback on failure."""
+    """Route task to configured provider with strict fail-fast behavior."""
     normalized = task_type.strip().lower()
 
     primary = "gemma" if normalized in _GEMMA_TASKS else "gemini"
@@ -29,11 +29,8 @@ def route_ai_task(task_type: str, prompt: str) -> str:
             logger.info("[AI-ROUTER] task=%s model=gemma total_ms=%s", normalized, total_ms)
             return text
         except Exception as exc:  # noqa: BLE001
-            logger.warning("[AI-ROUTER] task=%s gemma_failed=%s fallback=gemini", normalized, exc)
-            text = gemini_service.generate_text(prompt)
-            total_ms = round((time.perf_counter() - started) * 1000, 2)
-            logger.info("[AI-ROUTER] task=%s model=gemini(fallback) total_ms=%s", normalized, total_ms)
-            return text
+            logger.error("[AI-ROUTER] task=%s gemma_failed=%s", normalized, exc)
+            raise RuntimeError(f"AI FAILED: {exc}") from exc
 
     try:
         text = gemini_service.generate_text(prompt)
@@ -41,8 +38,5 @@ def route_ai_task(task_type: str, prompt: str) -> str:
         logger.info("[AI-ROUTER] task=%s model=gemini total_ms=%s", normalized, total_ms)
         return text
     except Exception as exc:  # noqa: BLE001
-        logger.warning("[AI-ROUTER] task=%s gemini_failed=%s fallback=gemma", normalized, exc)
-        text = gemma_service.generate_text(prompt)
-        total_ms = round((time.perf_counter() - started) * 1000, 2)
-        logger.info("[AI-ROUTER] task=%s model=gemma(fallback) total_ms=%s", normalized, total_ms)
-        return text
+        logger.error("[AI-ROUTER] task=%s gemini_failed=%s", normalized, exc)
+        raise RuntimeError(f"AI FAILED: {exc}") from exc

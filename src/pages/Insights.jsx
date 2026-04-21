@@ -17,6 +17,7 @@ import {
 } from "recharts";
 import { getCurrentUser, getResumeById, listResumes } from "../services/api.js";
 import { apiService } from "../services/api.ts";
+import AppSidebarNav from "../components/layout/AppSidebarNav";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
@@ -127,17 +128,19 @@ function Insights() {
   }, [resumeId]);
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-8 sm:py-10">
-      <div className="mx-auto max-w-5xl space-y-4">
-        <div className="flex items-center justify-between gap-3">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(124,58,237,0.07),transparent_25%),linear-gradient(180deg,#f8fafc_0%,#eef2f7_100%)] px-4 py-8 sm:py-10">
+      <AppSidebarNav />
+      <div className="mx-auto max-w-5xl space-y-4 lg:pl-64">
+        <div className="flex items-end justify-between gap-3">
           <div>
             <Badge className="w-fit">Insights</Badge>
-            <h1 className="mt-2 text-2xl font-bold text-slate-900">Career Insights from Resume JSON</h1>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">Career Insights from Resume JSON</h1>
+            <p className="mt-2 max-w-2xl text-sm text-slate-500">Softer charts, clearer hierarchy, same data source.</p>
           </div>
           <Button variant="secondary" onClick={() => navigate("/recruiter-lens")}>Back to Recruiter Lens</Button>
         </div>
 
-        <Card className="space-y-3">
+        <Card className="space-y-4">
           {loading ? (
             <div className="flex items-center gap-2 text-sm text-slate-600">
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -165,7 +168,7 @@ function Insights() {
 
           {insights ? (
             <div className="space-y-4">
-              <div className="rounded-xl border border-slate-200 bg-white p-4">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Score Overview</p>
                 <div className="mt-2 flex items-end justify-between gap-3">
                   <p className="text-4xl font-bold text-slate-900">{Math.round(Number(insights.latest_score ?? 0))}%</p>
@@ -180,7 +183,7 @@ function Insights() {
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-xl border border-slate-200 bg-white p-4">
+                <div className="rounded-2xl border border-slate-200 bg-white p-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Score Trend</p>
                   <div className="mt-3 h-56 w-full">
                     <ResponsiveContainer width="100%" height="100%">
@@ -195,7 +198,7 @@ function Insights() {
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-slate-200 bg-white p-4">
+                <div className="rounded-2xl border border-slate-200 bg-white p-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Skill Coverage</p>
                   <div className="mt-3 h-56 w-full">
                     <ResponsiveContainer width="100%" height="100%">
@@ -216,7 +219,7 @@ function Insights() {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-slate-200 bg-white p-4">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Top Missing Skills</p>
                 {Array.isArray(insights.top_missing_skills) && insights.top_missing_skills.length > 0 ? (
                   <div className="mt-3 flex flex-wrap gap-2">
@@ -231,7 +234,7 @@ function Insights() {
                 )}
               </div>
 
-              <div className="rounded-xl border border-slate-200 bg-white p-4">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Improvement Areas</p>
                 {Array.isArray(insights.improvement_areas) && insights.improvement_areas.length > 0 ? (
                   <div className="mt-3 h-44 w-full">

@@ -77,7 +77,7 @@ function FileUpload({ onFileUpload, disabled = false }: FileUploadProps) {
       />
       <label
         htmlFor="file-upload"
-        className={`cursor-pointer text-gray-400 hover:text-gray-300 ${
+        className={`cursor-pointer text-slate-400 transition hover:text-slate-700 ${
           disabled ? 'opacity-50 cursor-not-allowed' : ''
         }`}
       >

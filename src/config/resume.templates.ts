@@ -1,9 +1,31 @@
-export type TemplateId =
+export type CanonicalTemplateId =
+  | "modern-minimal"
+  | "classic-professional"
+  | "compact-ats"
+  | "two-column-modern"
+  | "elegant-serif"
+  | "clean-corporate"
+  | "creative-soft"
+  | "technical-dense"
+  | "student-friendly"
+  | "executive-style";
+
+export type LegacyTemplateId =
   | "template1"
   | "template2"
   | "template3"
   | "template4"
-  | "template6";
+  | "template6"
+  | "ats-minimal"
+  | "ats_minimal"
+  | "modern"
+  | "modern-clean"
+  | "modern_clean"
+  | "classic"
+  | "technical-profile"
+  | "technical_profile";
+
+export type TemplateId = CanonicalTemplateId | LegacyTemplateId;
 
 export interface ExperienceEntry {
   title: string;
@@ -26,7 +48,7 @@ export interface ResumeTemplateData {
 }
 
 export interface TemplateStyle {
-  id: TemplateId;
+  id: CanonicalTemplateId;
   name: string;
   description: string;
   category: "ats" | "professional" | "technical" | "executive" | "modern";
@@ -57,146 +79,169 @@ export interface TemplateStyle {
   html: string;
 }
 
-const TEMPLATE_DEFINITIONS: Record<TemplateId, TemplateStyle> = {
-  template1: {
-    id: "template1",
-    name: "Classic Professional",
-    description: "Centered header and serif presentation",
-    category: "professional",
-    fontFamily: { heading: "Georgia", body: "Times New Roman" },
-    fontSize: { name: 28, title: 12, section: 16, body: 13 },
-    colors: {
-      text: "#111111",
-      accent: "#111111",
-      background: "#ffffff",
-      secondary: "#444444",
-    },
-    lineHeight: 1.45,
-    layout: { columns: 1, headerStyle: "centered", sectionBorder: true, skillsLayout: "list" },
-    recommendedFor: ["Corporate roles", "General use", "Balanced content"],
-    html: `
-<div class="resume template1" style="font-family: Georgia, 'Times New Roman', serif; color: #111; width: 210mm; min-height: 297mm; box-sizing: border-box; padding: 12mm; margin: 0 auto; line-height: 1.45; background: #fff;">
-  <header style="text-align: center; border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-bottom: 14px;">
-    <h1 style="font-size: 28px; margin: 0;">{{name}}</h1>
-    <p style="margin: 6px 0 0 0;">{{location}} | {{email}} | {{phone}}</p>
+const BASE_TEMPLATE_HTML = `
+<div class="resume" style="width:210mm; min-height:297mm; box-sizing:border-box; margin:0 auto; padding:12mm; background:{{background}}; color:{{textColor}}; font-family:{{bodyFont}}; line-height:{{lineHeight}};">
+  <header style="margin-bottom:{{headerGap}}; text-align:{{headerAlign}}; border-bottom:{{headerBorder}}; padding-bottom:10px;">
+    <h1 style="margin:0; font-family:{{headingFont}}; font-size:{{nameSize}}pt; color:{{accentColor}};">{{name}}</h1>
+    {{title}}
+    <p style="margin:6px 0 0 0; color:{{secondaryColor}}; font-size:{{bodySize}}pt;">{{contact}}</p>
   </header>
-  <section style="margin-bottom: 12px;"><h2 style="font-size: 16px; margin-bottom: 6px;">• Professional Summary</h2><p style="margin: 0;">{{summary}}</p></section>
-  <section style="margin-bottom: 12px;"><h2 style="font-size: 16px; margin-bottom: 6px;">• Experience</h2>{{experience}}</section>
-  <section style="margin-bottom: 12px;"><h2 style="font-size: 16px; margin-bottom: 6px;">• Education</h2><p style="margin: 0;">{{education}}</p></section>
-  <section><h2 style="font-size: 16px; margin-bottom: 6px;">• Skills</h2><p style="margin: 0;">{{skills}}</p></section>
-</div>`,
-  },
-  template2: {
-    id: "template2",
-    name: "Modern Blue",
-    description: "Clean spacing with blue heading accents",
+  <div style="display:{{gridDisplay}}; grid-template-columns:{{gridColumns}}; gap:14px; align-items:start;">
+    <main>{{mainSections}}</main>
+    <aside>{{sideSections}}</aside>
+  </div>
+</div>`;
+
+const TEMPLATE_DEFINITIONS: Record<CanonicalTemplateId, TemplateStyle> = {
+  "modern-minimal": {
+    id: "modern-minimal",
+    name: "Modern Minimal",
+    description: "Airy spacing, crisp hierarchy, and a calm editorial feel.",
     category: "modern",
-    fontFamily: { heading: "Inter", body: "Inter" },
-    fontSize: { name: 28, title: 12, section: 15, body: 13 },
-    colors: {
-      text: "#0f172a",
-      accent: "#2563eb",
-      background: "#ffffff",
-      secondary: "#64748b",
-    },
-    lineHeight: 1.5,
+    fontFamily: { heading: "Aptos, Arial, sans-serif", body: "Aptos, Arial, sans-serif" },
+    fontSize: { name: 18, title: 11, section: 13, body: 10 },
+    colors: { text: "#0f172a", accent: "#0f766e", background: "#ffffff", secondary: "#475569" },
+    lineHeight: 1.45,
     layout: { columns: 1, headerStyle: "left", sectionBorder: true, skillsLayout: "tags" },
-    recommendedFor: ["Tech roles", "Product roles", "Readable modern style"],
-    html: `
-<div class="resume template2" style="font-family: Inter, Arial, sans-serif; color: #0f172a; width: 210mm; min-height: 297mm; box-sizing: border-box; padding: 12mm; margin: 0 auto; line-height: 1.5; background: #fff;">
-  <header style="border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 14px;">
-    <h1 style="color: #2563eb; font-size: 28px; margin: 0;">{{name}}</h1>
-    <p style="margin: 6px 0 0 0;">{{location}} | {{email}} | {{phone}}</p>
-  </header>
-  <section style="margin-bottom: 12px;"><h2 style="color: #2563eb; margin-bottom: 6px;">• Summary</h2><p style="margin: 0;">{{summary}}</p></section>
-  <section style="margin-bottom: 12px;"><h2 style="color: #2563eb; margin-bottom: 6px;">• Experience</h2>{{experience}}</section>
-  <section style="margin-bottom: 12px;"><h2 style="color: #2563eb; margin-bottom: 6px;">• Education</h2><p style="margin: 0;">{{education}}</p></section>
-  <section><h2 style="color: #2563eb; margin-bottom: 6px;">• Skills</h2><p style="margin: 0;">{{skills}}</p></section>
-</div>`,
+    recommendedFor: ["Modern roles", "General use", "Readable PDFs"],
+    html: BASE_TEMPLATE_HTML,
   },
-  template3: {
-    id: "template3",
-    name: "Technical Dense",
-    description: "Compact ATS-friendly layout for technical resumes",
-    category: "technical",
-    fontFamily: { heading: "Arial", body: "Arial" },
-    fontSize: { name: 22, title: 12, section: 14, body: 12 },
-    colors: {
-      text: "#111111",
-      accent: "#111111",
-      background: "#ffffff",
-      secondary: "#444444",
-    },
-    lineHeight: 1.35,
-    layout: { columns: 1, headerStyle: "compact", sectionBorder: false, skillsLayout: "grouped" },
-    recommendedFor: ["Engineering", "ATS filtering", "Dense resumes"],
-    html: `
-<div class="resume template3" style="font-family: Arial, sans-serif; color: #111; width: 210mm; min-height: 297mm; box-sizing: border-box; padding: 10mm 12mm; margin: 0 auto; font-size: 13px; line-height: 1.35; background: #fff;">
-  <header style="margin-bottom: 12px;">
-    <h1 style="margin: 0; font-size: 22px;">{{name}}</h1>
-    <p style="margin: 5px 0 0 0;">{{email}} | {{phone}} | {{linkedin}}</p>
-  </header>
-  <section style="margin-bottom: 10px;"><h3 style="margin-bottom: 4px;">• Summary</h3><p style="margin: 0;">{{summary}}</p></section>
-  <section style="margin-bottom: 10px;"><h3 style="margin-bottom: 4px;">• Experience</h3>{{experience}}</section>
-  <section style="margin-bottom: 10px;"><h3 style="margin-bottom: 4px;">• Education</h3><p style="margin: 0;">{{education}}</p></section>
-  <section><h3 style="margin-bottom: 4px;">• Skills</h3><p style="margin: 0;">{{skills}}</p></section>
-</div>`,
+  "classic-professional": {
+    id: "classic-professional",
+    name: "Classic Professional",
+    description: "Centered serif presentation with traditional resume balance.",
+    category: "professional",
+    fontFamily: { heading: "Georgia, Times New Roman, serif", body: "Georgia, Times New Roman, serif" },
+    fontSize: { name: 19, title: 11, section: 13, body: 10 },
+    colors: { text: "#111827", accent: "#111827", background: "#ffffff", secondary: "#4b5563" },
+    lineHeight: 1.5,
+    layout: { columns: 1, headerStyle: "centered", sectionBorder: true, skillsLayout: "list" },
+    recommendedFor: ["Corporate roles", "Traditional recruiters", "Balanced content"],
+    html: BASE_TEMPLATE_HTML,
   },
-  template4: {
-    id: "template4",
-    name: "Executive Clean",
-    description: "Leadership-oriented layout with strong hierarchy",
-    category: "executive",
-    fontFamily: { heading: "Cambria", body: "Cambria" },
-    fontSize: { name: 32, title: 13, section: 17, body: 13 },
-    colors: {
-      text: "#1e293b",
-      accent: "#0f172a",
-      background: "#ffffff",
-      secondary: "#475569",
-    },
-    lineHeight: 1.55,
-    layout: { columns: 1, headerStyle: "left", sectionBorder: false, skillsLayout: "list" },
-    recommendedFor: ["Senior leadership", "Director roles", "Narrative impact"],
-    html: `
-<div class="resume template4" style="font-family: Cambria, 'Times New Roman', serif; color: #1e293b; width: 210mm; min-height: 297mm; box-sizing: border-box; padding: 12mm; margin: 0 auto; line-height: 1.55; background: #fff;">
-  <header style="margin-bottom: 20px;">
-    <h1 style="font-size: 32px; margin: 0;">{{name}}</h1>
-    <p style="margin: 8px 0 0 0;">{{email}} | {{phone}} | {{location}}</p>
-  </header>
-  <section style="margin-bottom: 12px;"><h2 style="margin-bottom: 6px;">• Professional Summary</h2><p style="margin: 0;">{{summary}}</p></section>
-  <section style="margin-bottom: 12px;"><h2 style="margin-bottom: 6px;">• Leadership Experience</h2>{{experience}}</section>
-  <section style="margin-bottom: 12px;"><h2 style="margin-bottom: 6px;">• Education</h2><p style="margin: 0;">{{education}}</p></section>
-  <section><h2 style="margin-bottom: 6px;">• Skills</h2><p style="margin: 0;">{{skills}}</p></section>
-</div>`,
-  },
-  template6: {
-    id: "template6",
-    name: "Minimal ATS",
-    description: "Plain ATS-safe structure with no visual dependencies",
+  "compact-ats": {
+    id: "compact-ats",
+    name: "Compact ATS",
+    description: "Dense, scanner-friendly structure that keeps everything text-first.",
     category: "ats",
-    fontFamily: { heading: "Arial", body: "Arial" },
-    fontSize: { name: 24, title: 12, section: 15, body: 12 },
-    colors: {
-      text: "#000000",
-      accent: "#000000",
-      background: "#ffffff",
-      secondary: "#222222",
-    },
-    lineHeight: 1.4,
-    layout: { columns: 1, headerStyle: "left", sectionBorder: false, skillsLayout: "list" },
-    recommendedFor: ["ATS-first applications", "Government", "High-volume applying"],
-    html: `
-<div class="resume template6" style="font-family: Arial, sans-serif; color: #000; width: 210mm; min-height: 297mm; box-sizing: border-box; padding: 12mm; margin: 0 auto; line-height: 1.4; background: #fff;">
-  <h1 style="margin-bottom: 6px;">{{name}}</h1>
-  <p style="margin-top: 0;">{{email}} | {{phone}} | {{location}}</p>
-  <h2 style="margin-bottom: 6px;">• Summary</h2><p style="margin-top: 0;">{{summary}}</p>
-  <h2 style="margin-bottom: 6px;">• Experience</h2>{{experience}}
-  <h2 style="margin-bottom: 6px;">• Education</h2><p style="margin-top: 0;">{{education}}</p>
-  <h2 style="margin-bottom: 6px;">• Skills</h2><p style="margin-top: 0;">{{skills}}</p>
-</div>`,
+    fontFamily: { heading: "Arial, sans-serif", body: "Arial, sans-serif" },
+    fontSize: { name: 17, title: 11, section: 12, body: 9 },
+    colors: { text: "#111111", accent: "#111111", background: "#ffffff", secondary: "#3f3f46" },
+    lineHeight: 1.28,
+    layout: { columns: 1, headerStyle: "compact", sectionBorder: false, skillsLayout: "grouped" },
+    recommendedFor: ["ATS-first submissions", "High-volume applications", "Dense experience"],
+    html: BASE_TEMPLATE_HTML,
+  },
+  "two-column-modern": {
+    id: "two-column-modern",
+    name: "Two-column Modern",
+    description: "A split layout that gives summary and skills their own lane.",
+    category: "modern",
+    fontFamily: { heading: "Inter, Arial, sans-serif", body: "Inter, Arial, sans-serif" },
+    fontSize: { name: 19, title: 11, section: 13, body: 10 },
+    colors: { text: "#0f172a", accent: "#2563eb", background: "#ffffff", secondary: "#475569" },
+    lineHeight: 1.42,
+    layout: { columns: 2, headerStyle: "left", sectionBorder: false, skillsLayout: "tags" },
+    recommendedFor: ["Product roles", "Design-minded applicants", "Modern portfolios"],
+    html: BASE_TEMPLATE_HTML,
+  },
+  "elegant-serif": {
+    id: "elegant-serif",
+    name: "Elegant Serif",
+    description: "Refined serif typography with generous vertical rhythm.",
+    category: "professional",
+    fontFamily: { heading: "Garamond, Georgia, serif", body: "Garamond, Georgia, serif" },
+    fontSize: { name: 20, title: 12, section: 14, body: 10 },
+    colors: { text: "#1f2937", accent: "#7c2d12", background: "#fffdf9", secondary: "#6b7280" },
+    lineHeight: 1.55,
+    layout: { columns: 1, headerStyle: "centered", sectionBorder: true, skillsLayout: "list" },
+    recommendedFor: ["Leadership", "Consulting", "Formal presentations"],
+    html: BASE_TEMPLATE_HTML,
+  },
+  "clean-corporate": {
+    id: "clean-corporate",
+    name: "Clean Corporate",
+    description: "Neutral, polished, and safe for general corporate screening.",
+    category: "professional",
+    fontFamily: { heading: "Helvetica, Arial, sans-serif", body: "Helvetica, Arial, sans-serif" },
+    fontSize: { name: 18, title: 11, section: 13, body: 10 },
+    colors: { text: "#0f172a", accent: "#1d4ed8", background: "#ffffff", secondary: "#475569" },
+    lineHeight: 1.47,
+    layout: { columns: 1, headerStyle: "left", sectionBorder: true, skillsLayout: "list" },
+    recommendedFor: ["Finance", "Operations", "Corporate hiring"],
+    html: BASE_TEMPLATE_HTML,
+  },
+  "creative-soft": {
+    id: "creative-soft",
+    name: "Creative Soft",
+    description: "Gentle contrast and airy spacing for portfolio-friendly resumes.",
+    category: "modern",
+    fontFamily: { heading: "Aptos, Arial, sans-serif", body: "Aptos, Arial, sans-serif" },
+    fontSize: { name: 19, title: 11, section: 13, body: 10 },
+    colors: { text: "#1f2937", accent: "#be185d", background: "#fffafc", secondary: "#6b7280" },
+    lineHeight: 1.46,
+    layout: { columns: 2, headerStyle: "left", sectionBorder: false, skillsLayout: "tags" },
+    recommendedFor: ["Creative roles", "Brand teams", "Portfolio-led applications"],
+    html: BASE_TEMPLATE_HTML,
+  },
+  "technical-dense": {
+    id: "technical-dense",
+    name: "Technical Dense",
+    description: "Compact engineering-first format optimized for signal density.",
+    category: "technical",
+    fontFamily: { heading: "Roboto, Arial, sans-serif", body: "Roboto, Arial, sans-serif" },
+    fontSize: { name: 17, title: 11, section: 12, body: 9 },
+    colors: { text: "#111827", accent: "#0f172a", background: "#ffffff", secondary: "#52525b" },
+    lineHeight: 1.28,
+    layout: { columns: 1, headerStyle: "compact", sectionBorder: false, skillsLayout: "grouped" },
+    recommendedFor: ["Engineering", "Data", "Dense technical resumes"],
+    html: BASE_TEMPLATE_HTML,
+  },
+  "student-friendly": {
+    id: "student-friendly",
+    name: "Student Friendly",
+    description: "Friendly spacing and clear section breaks for early-career resumes.",
+    category: "modern",
+    fontFamily: { heading: "Inter, Arial, sans-serif", body: "Inter, Arial, sans-serif" },
+    fontSize: { name: 18, title: 11, section: 13, body: 10 },
+    colors: { text: "#0f172a", accent: "#0ea5e9", background: "#ffffff", secondary: "#64748b" },
+    lineHeight: 1.52,
+    layout: { columns: 1, headerStyle: "centered", sectionBorder: false, skillsLayout: "tags" },
+    recommendedFor: ["Students", "Internships", "Early career"],
+    html: BASE_TEMPLATE_HTML,
+  },
+  "executive-style": {
+    id: "executive-style",
+    name: "Executive Style",
+    description: "Strong hierarchy and polished spacing for senior-level narratives.",
+    category: "executive",
+    fontFamily: { heading: "Cambria, Georgia, serif", body: "Cambria, Georgia, serif" },
+    fontSize: { name: 20, title: 12, section: 14, body: 10 },
+    colors: { text: "#111827", accent: "#111827", background: "#ffffff", secondary: "#4b5563" },
+    lineHeight: 1.54,
+    layout: { columns: 1, headerStyle: "left", sectionBorder: true, skillsLayout: "list" },
+    recommendedFor: ["Executives", "Directors", "Leadership stories"],
+    html: BASE_TEMPLATE_HTML,
   },
 };
+
+const TEMPLATE_ALIAS_MAP: Record<LegacyTemplateId, CanonicalTemplateId> = {
+  template1: "classic-professional",
+  template2: "modern-minimal",
+  template3: "technical-dense",
+  template4: "executive-style",
+  template6: "compact-ats",
+  "ats-minimal": "compact-ats",
+  ats_minimal: "compact-ats",
+  modern: "modern-minimal",
+  "modern-clean": "modern-minimal",
+  modern_clean: "modern-minimal",
+  classic: "classic-professional",
+  "technical-profile": "technical-dense",
+  technical_profile: "technical-dense",
+};
+
+const normalizeKey = (value: string) => value.trim().toLowerCase().replace(/_/g, "-");
 
 function escapeHtml(value: string): string {
   return value
@@ -208,47 +253,34 @@ function escapeHtml(value: string): string {
 }
 
 function normalizeResumeData(input: Partial<ResumeTemplateData> & Record<string, unknown>): ResumeTemplateData {
-  const sections = Array.isArray(input.sections)
-    ? (input.sections as Array<{ section?: string; bullets?: Array<{ content?: string }>; title?: string }>)
-    : [];
+  const sections = Array.isArray(input.sections) ? (input.sections as Array<{ section?: string; bullets?: Array<{ content?: string }>; title?: string }>) : [];
+  const experienceSection = sections.find((section) => section.section === "experience");
+  const projectsSection = sections.find((section) => section.section === "projects");
+  const skillsSection = sections.find((section) => section.section === "skills");
+  const educationSection = sections.find((section) => section.section === "education");
+  const header = (input.header as { name?: string; location?: string; email?: string; phone?: string; title?: string } | undefined) ?? {};
 
-  const experienceSection = sections.find((s) => s.section === "experience");
-  const projectsSection = sections.find((s) => s.section === "projects");
-  const skillsSection = sections.find((s) => s.section === "skills");
-  const educationSection = sections.find((s) => s.section === "education");
-
-  const explicitExperience = Array.isArray(input.experience)
-    ? (input.experience as ExperienceEntry[])
-    : [];
-
-  const fallbackExperience: ExperienceEntry[] = (experienceSection?.bullets ?? []).map((b) => ({
-    title: (input.header as { title?: string } | undefined)?.title ?? "Research IISc Intern",
-    company: "Company",
+  const explicitExperience = Array.isArray(input.experience) ? (input.experience as ExperienceEntry[]) : [];
+  const fallbackExperience: ExperienceEntry[] = (experienceSection?.bullets ?? []).map((bullet) => ({
+    title: header.title ?? "Experience",
+    company: "Organization",
     date: "",
-    bullets: [b.content ?? ""],
+    bullets: [bullet.content ?? ""],
   }));
 
-  const fallbackProjects: ExperienceEntry[] = (projectsSection?.bullets ?? []).map((b) => ({
-    title: `Projects: ${(b.content ?? "").split(":")[0]}`,
+  const fallbackProjects: ExperienceEntry[] = (projectsSection?.bullets ?? []).map((bullet) => ({
+    title: `Projects: ${(bullet.content ?? "").split(":")[0]}`,
     company: "Project",
     date: "",
-    bullets: [(b.content ?? "").includes(":") ? (b.content ?? "").split(":").slice(1).join(":").trim() : (b.content ?? "")],
+    bullets: [(bullet.content ?? "").includes(":") ? (bullet.content ?? "").split(":").slice(1).join(":").trim() : (bullet.content ?? "")],
   }));
 
   const rawSkills = input.skills as unknown;
   const normalizedSkills = Array.isArray(rawSkills)
-    ? rawSkills.map((s) => String(s).trim()).filter(Boolean)
+    ? rawSkills.map((skill) => String(skill).trim()).filter(Boolean)
     : typeof rawSkills === "string"
-      ? rawSkills.split(",").map((s: string) => s.trim()).filter(Boolean)
-      : (skillsSection?.bullets ?? []).map((b) => b.content ?? "").filter(Boolean);
-
-  const header = (input.header as {
-    name?: string;
-    location?: string;
-    email?: string;
-    phone?: string;
-    title?: string;
-  } | undefined) ?? {};
+      ? rawSkills.split(",").map((skill: string) => skill.trim()).filter(Boolean)
+      : (skillsSection?.bullets ?? []).map((bullet) => bullet.content ?? "").filter(Boolean);
 
   return {
     name: input.name ?? header.name ?? "Your Name",
@@ -259,82 +291,96 @@ function normalizeResumeData(input: Partial<ResumeTemplateData> & Record<string,
     summary: input.summary ?? "",
     education:
       input.education ??
-      (educationSection?.bullets ?? []).map((b) => b.content ?? "").filter(Boolean).join(" | "),
+      (educationSection?.bullets ?? []).map((bullet) => bullet.content ?? "").filter(Boolean).join(" | "),
     skills: normalizedSkills,
     role_type: input.role_type ?? header.title ?? "general",
     experience: explicitExperience.length > 0 ? explicitExperience : [...fallbackExperience, ...fallbackProjects],
   };
 }
 
-function renderExperienceByTemplate(templateId: TemplateId, data: ResumeTemplateData): string {
-  const items = data.experience.length > 0
-    ? data.experience
-    : [{ title: "", company: "", date: "", bullets: [] }];
-
-  const withBulletHeading = (title: string) => (title.trim().startsWith("•") ? title : `• ${title}`);
-
-  if (templateId === "template2") {
-    return items
-      .map((job) => `
-<div style="margin-bottom:12px;">
-  <div style="color:#2563eb;font-weight:600;">${escapeHtml(withBulletHeading(job.title))} | ${escapeHtml(job.company)}</div>
-  <div style="font-size:12px;color:gray;">${escapeHtml(job.date)}</div>
-  <ul style="margin:6px 0 0 18px;">${job.bullets.map((b) => `<li>${escapeHtml(b)}</li>`).join("")}</ul>
-</div>`)
-      .join("");
-  }
-
-  if (templateId === "template3") {
-    return items
-      .map((job) => `
-<div style="margin-bottom:8px;">
-  <strong>${escapeHtml(job.company)}</strong> - ${escapeHtml(withBulletHeading(job.title))}
-  <span style="float:right;">${escapeHtml(job.date)}</span>
-  <ul style="margin:6px 0 0 18px;">${job.bullets.map((b) => `<li>${escapeHtml(b)}</li>`).join("")}</ul>
-</div>`)
-      .join("");
-  }
-
-  if (templateId === "template4") {
-    return items
-      .map((job) => `
-<div style="margin-bottom:16px;">
-  <div style="display:flex;justify-content:space-between;gap:12px;">
-    <div><strong>${escapeHtml(withBulletHeading(job.title))}</strong><div>${escapeHtml(job.company)}</div></div>
-    <div>${escapeHtml(job.date)}</div>
-  </div>
-  <ul style="margin:6px 0 0 18px;">${job.bullets.map((b) => `<li>${escapeHtml(b)}</li>`).join("")}</ul>
-</div>`)
-      .join("");
-  }
-
-  if (templateId === "template6") {
-    return items
-      .map((job) => `
-<div style="margin-bottom:10px;">
-  <strong>${escapeHtml(withBulletHeading(job.title))} - ${escapeHtml(job.company)}</strong>
-  <div>${escapeHtml(job.date)}</div>
-  <ul style="margin:6px 0 0 18px;">${job.bullets.map((b) => `<li>${escapeHtml(b)}</li>`).join("")}</ul>
-</div>`)
-      .join("");
-  }
+function renderExperienceByTemplate(template: TemplateStyle, data: ResumeTemplateData): string {
+  const items = data.experience.length > 0 ? data.experience : [{ title: "", company: "", date: "", bullets: [] }];
 
   return items
-    .map((job) => `
+    .map((job) => {
+      const bulletList = job.bullets.map((bullet) => `<li>${escapeHtml(bullet)}</li>`).join("");
+      if (template.layout.columns === 2) {
+        return `
 <div style="margin-bottom:10px;">
-  <div style="display:flex;justify-content:space-between;gap:12px;">
-    <strong>${escapeHtml(withBulletHeading(job.title))}</strong>
-    <span>${escapeHtml(job.date)}</span>
+  <div style="display:flex;justify-content:space-between;gap:12px;align-items:baseline;">
+    <strong>${escapeHtml(job.title)}</strong>
+    <span style="font-size:${template.fontSize.body - 1}px;color:${template.colors.secondary};">${escapeHtml(job.date)}</span>
   </div>
-  <div>${escapeHtml(job.company)}</div>
-  <ul style="margin:6px 0 0 18px;">${job.bullets.map((b) => `<li>${escapeHtml(b)}</li>`).join("")}</ul>
-</div>`)
+  <div style="color:${template.colors.secondary};">${escapeHtml(job.company)}</div>
+  ${bulletList ? `<ul style="margin:6px 0 0 18px;">${bulletList}</ul>` : ""}
+</div>`;
+      }
+
+      return `
+<div style="margin-bottom:10px;">
+  <div style="display:flex;justify-content:space-between;gap:12px;align-items:baseline;">
+    <strong>${escapeHtml(job.title)}</strong>
+    <span style="font-size:${template.fontSize.body - 1}px;color:${template.colors.secondary};">${escapeHtml(job.date)}</span>
+  </div>
+  <div style="color:${template.colors.secondary};">${escapeHtml(job.company)}</div>
+  ${bulletList ? `<ul style="margin:6px 0 0 18px;">${bulletList}</ul>` : ""}
+</div>`;
+    })
     .join("");
+}
+
+function renderSkills(template: TemplateStyle, skills: string[]): string {
+  if (template.layout.columns === 2 || template.layout.skillsLayout === "tags") {
+    return skills.map((skill) => `<span style="display:inline-block;margin:0 6px 6px 0;padding:4px 8px;border:1px solid ${template.colors.accent}33;border-radius:999px;">${escapeHtml(skill)}</span>`).join("");
+  }
+
+  if (template.layout.skillsLayout === "grouped") {
+    return `<p style="margin:0;">${escapeHtml(skills.join(" · "))}</p>`;
+  }
+
+  return `<p style="margin:0;">${escapeHtml(skills.join(", "))}</p>`;
+}
+
+function buildTokens(template: TemplateStyle, data: ResumeTemplateData): Record<string, string> {
+  const contact = [data.email, data.phone, data.location, data.linkedin].filter(Boolean).join(" | ");
+  const summary = data.summary ? `<section style="margin-bottom:12px;"><h2 style="margin:0 0 6px 0;font-size:${template.fontSize.section}px;color:${template.colors.accent};">Summary</h2><p style="margin:0;">${escapeHtml(data.summary)}</p></section>` : "";
+  const education = data.education ? `<section style="margin-bottom:12px;"><h2 style="margin:0 0 6px 0;font-size:${template.fontSize.section}px;color:${template.colors.accent};">Education</h2><p style="margin:0;">${escapeHtml(data.education)}</p></section>` : "";
+  const skills = data.skills.length > 0 ? `<section style="margin-bottom:12px;"><h2 style="margin:0 0 6px 0;font-size:${template.fontSize.section}px;color:${template.colors.accent};">Skills</h2>${renderSkills(template, data.skills)}</section>` : "";
+  const experience = renderExperienceByTemplate(template, data);
+
+  const mainSections = template.layout.columns === 2 ? `${experience}` : `${summary}${experience}${education}${skills}`;
+  const sideSections = template.layout.columns === 2 ? `${summary}${education}${skills}` : "";
+
+  return {
+    name: escapeHtml(data.name),
+    title: data.role_type ? `<p style="margin:4px 0 0 0;color:${template.colors.secondary};font-size:${template.fontSize.body}px;">${escapeHtml(data.role_type)}</p>` : "",
+    contact: escapeHtml(contact),
+    background: template.colors.background,
+    textColor: template.colors.text,
+    bodyFont: template.fontFamily.body,
+    headingFont: template.fontFamily.heading,
+    nameSize: String(template.fontSize.name),
+    lineHeight: String(template.lineHeight),
+    headerGap: template.layout.headerStyle === "compact" ? "8px" : "12px",
+    headerAlign: template.layout.headerStyle === "centered" ? "center" : "left",
+    headerBorder: template.layout.sectionBorder ? `1px solid ${template.colors.secondary}33` : "none",
+    accentColor: template.colors.accent,
+    secondaryColor: template.colors.secondary,
+    bodySize: String(template.fontSize.body),
+    gridDisplay: template.layout.columns === 2 ? "grid" : "block",
+    gridColumns: template.layout.columns === 2 ? "minmax(0, 1.4fr) minmax(0, 0.6fr)" : "1fr",
+    mainSections,
+    sideSections,
+  };
+}
+
+function renderWithTemplate(template: TemplateStyle, data: ResumeTemplateData): string {
+  const tokens = buildTokens(template, data);
+  return template.html.replace(/{{\s*([a-zA-Z0-9_]+)\s*}}/g, (_, key: string) => tokens[key] ?? "");
 }
 
 export function select_template(resume_data: Partial<ResumeTemplateData> & Record<string, unknown>): TemplateId {
   const data = normalizeResumeData(resume_data);
-
   const experienceLength = data.experience.length;
   const skillsCount = data.skills.length;
   const roleType = data.role_type.toLowerCase();
@@ -342,26 +388,26 @@ export function select_template(resume_data: Partial<ResumeTemplateData> & Recor
   const bulletDensity = experienceLength > 0 ? totalBullets / experienceLength : 0;
 
   if (roleType.includes("director") || roleType.includes("vp") || roleType.includes("head") || roleType.includes("chief")) {
-    return "template4";
+    return "executive-style";
   }
 
   if (roleType.includes("engineer") || roleType.includes("developer") || roleType.includes("architect") || skillsCount >= 12 || bulletDensity >= 4) {
-    return "template3";
+    return "technical-dense";
   }
 
   if (skillsCount >= 10 && experienceLength >= 2) {
-    return "template2";
+    return "two-column-modern";
   }
 
   if (experienceLength <= 1 || bulletDensity <= 1.5) {
-    return "template6";
+    return "compact-ats";
   }
 
   if (roleType.includes("product") || roleType.includes("design") || roleType.includes("marketing")) {
-    return "template2";
+    return "modern-minimal";
   }
 
-  return "template1";
+  return "classic-professional";
 }
 
 export function suggest_template(resume_data: Partial<ResumeTemplateData> & Record<string, unknown>): TemplateId {
@@ -372,44 +418,25 @@ export function suggestTemplate(resume_data: Partial<ResumeTemplateData> & Recor
   return suggest_template(resume_data);
 }
 
-export function render_template(
-  template_id: TemplateId,
-  resume_data: Partial<ResumeTemplateData> & Record<string, unknown>,
-): string {
+export function render_template(template_id: TemplateId, resume_data: Partial<ResumeTemplateData> & Record<string, unknown>): string {
   const data = normalizeResumeData(resume_data);
-  const template = TEMPLATE_DEFINITIONS[template_id] ?? TEMPLATE_DEFINITIONS.template1;
-
-  const tokens: Record<string, string> = {
-    name: escapeHtml(data.name),
-    location: escapeHtml(data.location),
-    email: escapeHtml(data.email),
-    phone: escapeHtml(data.phone),
-    linkedin: escapeHtml(data.linkedin),
-    summary: escapeHtml(data.summary),
-    education: escapeHtml(data.education),
-    skills: escapeHtml(data.skills.join(", ")),
-    experience: renderExperienceByTemplate(template.id, data),
-  };
-
-  return template.html.replace(/{{\s*([a-zA-Z0-9_]+)\s*}}/g, (_, key: string) => tokens[key] ?? "");
+  const resolvedId = normalizeKey(template_id) in TEMPLATE_DEFINITIONS ? (normalizeKey(template_id) as CanonicalTemplateId) : TEMPLATE_ALIAS_MAP[template_id as LegacyTemplateId] ?? "modern-minimal";
+  const template = TEMPLATE_DEFINITIONS[resolvedId];
+  return renderWithTemplate(template, data);
 }
 
-export function renderTemplate(
-  templateId: TemplateId,
-  resumeData: Partial<ResumeTemplateData> & Record<string, unknown>,
-): string {
+export function renderTemplate(templateId: TemplateId, resumeData: Partial<ResumeTemplateData> & Record<string, unknown>): string {
   return render_template(templateId, resumeData);
 }
 
-export function switch_template(
-  template_id: TemplateId,
-  resume_data: Partial<ResumeTemplateData> & Record<string, unknown>,
-): string {
+export function switch_template(template_id: TemplateId, resume_data: Partial<ResumeTemplateData> & Record<string, unknown>): string {
   return render_template(template_id, resume_data);
 }
 
 export function getTemplateById(id: string): TemplateStyle | undefined {
-  return TEMPLATE_DEFINITIONS[id as TemplateId];
+  const normalized = normalizeKey(id);
+  const canonical = (normalized in TEMPLATE_DEFINITIONS ? normalized : TEMPLATE_ALIAS_MAP[normalized as LegacyTemplateId]) as CanonicalTemplateId | undefined;
+  return canonical ? TEMPLATE_DEFINITIONS[canonical] : undefined;
 }
 
 export function getAllTemplates(): TemplateStyle[] {
@@ -417,9 +444,27 @@ export function getAllTemplates(): TemplateStyle[] {
 }
 
 export const resumeTemplates: Record<TemplateId, (data: Partial<ResumeTemplateData> & Record<string, unknown>) => string> = {
-  template1: (data) => render_template("template1", data),
-  template2: (data) => render_template("template2", data),
-  template3: (data) => render_template("template3", data),
-  template4: (data) => render_template("template4", data),
-  template6: (data) => render_template("template6", data),
+  "modern-minimal": (data) => render_template("modern-minimal", data),
+  "classic-professional": (data) => render_template("classic-professional", data),
+  "compact-ats": (data) => render_template("compact-ats", data),
+  "two-column-modern": (data) => render_template("two-column-modern", data),
+  "elegant-serif": (data) => render_template("elegant-serif", data),
+  "clean-corporate": (data) => render_template("clean-corporate", data),
+  "creative-soft": (data) => render_template("creative-soft", data),
+  "technical-dense": (data) => render_template("technical-dense", data),
+  "student-friendly": (data) => render_template("student-friendly", data),
+  "executive-style": (data) => render_template("executive-style", data),
+  template1: (data) => render_template("classic-professional", data),
+  template2: (data) => render_template("modern-minimal", data),
+  template3: (data) => render_template("technical-dense", data),
+  template4: (data) => render_template("executive-style", data),
+  template6: (data) => render_template("compact-ats", data),
+  "ats-minimal": (data) => render_template("compact-ats", data),
+  ats_minimal: (data) => render_template("compact-ats", data),
+  modern: (data) => render_template("modern-minimal", data),
+  "modern-clean": (data) => render_template("modern-minimal", data),
+  modern_clean: (data) => render_template("modern-minimal", data),
+  classic: (data) => render_template("classic-professional", data),
+  "technical-profile": (data) => render_template("technical-dense", data),
+  technical_profile: (data) => render_template("technical-dense", data),
 };

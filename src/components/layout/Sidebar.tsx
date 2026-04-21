@@ -44,24 +44,22 @@ export function Sidebar() {
   const { currentPage, setCurrentPage } = useCareerOSStore();
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 border-r border-slate-800 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 backdrop-blur p-4">
-      {/* Logo */}
+    <aside className="fixed left-0 top-0 h-screen w-60 border-r border-slate-200/80 bg-white/90 px-4 py-5 shadow-[0_12px_40px_rgba(15,23,42,0.04)] backdrop-blur-xl">
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="mb-8"
+        className="mb-6"
       >
-        <h1 className="text-2xl font-black tracking-tighter">
-          <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
+        <h1 className="text-2xl font-black tracking-tight text-slate-950">
+          <span className="bg-gradient-to-r from-slate-900 via-blue-700 to-indigo-600 bg-clip-text text-transparent">
             Career
           </span>
-          <span className="text-slate-100">OS</span>
+          <span className="text-slate-950">OS</span>
         </h1>
         <p className="mt-1 text-xs text-slate-500">Build your best resume</p>
       </motion.div>
 
-      {/* Navigation */}
       <nav className="space-y-2">
         {items.map((item, index) => (
           <motion.button
@@ -70,31 +68,31 @@ export function Sidebar() {
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.3, delay: index * 0.05 }}
-            className={`relative w-full rounded-xl px-4 py-3 text-left transition duration-150 ${
+            className={`relative w-full rounded-2xl px-4 py-3 text-left transition duration-200 ${
               currentPage === item.id
-                ? "text-slate-50"
-                : "text-slate-400 hover:bg-slate-800/40"
+                ? "border border-slate-900 bg-slate-900 text-white shadow-lg shadow-slate-900/10"
+                : "border border-transparent text-slate-600 hover:border-slate-200 hover:bg-slate-50"
             }`}
           >
             {currentPage === item.id && (
               <motion.span
                 layoutId="activeNav"
-                className="absolute inset-0 rounded-xl bg-gradient-to-r from-cyan-500/20 via-blue-500/10 to-purple-500/20"
+                className="absolute inset-0 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900"
               />
             )}
             <div className="relative flex items-center gap-3">
               <div
                 className={`transition ${
                   currentPage === item.id
-                    ? "text-cyan-400"
-                    : "text-slate-500"
+                    ? "text-white"
+                    : "text-slate-400"
                 }`}
               >
                 {item.icon}
               </div>
               <div className="flex-1">
                 <p className="text-sm font-semibold">{item.label}</p>
-                <p className="text-xs text-slate-500">{item.caption}</p>
+                <p className={`text-xs ${currentPage === item.id ? "text-white/65" : "text-slate-500"}`}>{item.caption}</p>
               </div>
             </div>
           </motion.button>
@@ -108,9 +106,9 @@ export function Sidebar() {
         transition={{ duration: 0.5, delay: 0.3 }}
         className="absolute bottom-4 left-4 right-4"
       >
-        <div className="rounded-lg border border-slate-800/50 bg-slate-900/50 p-3 text-center">
-          <p className="text-xs font-medium text-cyan-400">💡 Tip</p>
-          <p className="mt-1 text-xs text-slate-400">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-center">
+          <p className="text-xs font-semibold text-slate-900">Tip</p>
+          <p className="mt-1 text-xs text-slate-500">
             Chat first, then refine in Studio
           </p>
         </div>

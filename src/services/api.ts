@@ -107,6 +107,11 @@ export const apiService = {
     return response.data;
   },
 
+  async getResumeTemplates() {
+    const response = await api.get<Array<Record<string, unknown>>>('/resume/templates');
+    return response.data;
+  },
+
   async sendFeedback(payload: {
     user_id: string;
     feedback: Array<{
@@ -197,11 +202,11 @@ export const apiService = {
   },
 
   getDownloadPdfUrl(user_id: string, template: string) {
-    return `${api.defaults.baseURL}/resume/download/pdf?user_id=${encodeURIComponent(user_id)}&template=${encodeURIComponent(template)}`;
+    return `${api.defaults.baseURL}/resume/download/pdf?user_id=${encodeURIComponent(user_id)}&template_id=${encodeURIComponent(template)}`;
   },
 
   getDownloadDocxUrl(user_id: string, template: string) {
-    return `${api.defaults.baseURL}/resume/download/docx?user_id=${encodeURIComponent(user_id)}&template=${encodeURIComponent(template)}`;
+    return `${api.defaults.baseURL}/resume/download/docx?user_id=${encodeURIComponent(user_id)}&template_id=${encodeURIComponent(template)}`;
   },
 
   // New Resume Builder Chat APIs

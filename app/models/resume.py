@@ -29,6 +29,7 @@ class Resume(Base):
     user_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     title: Mapped[str] = mapped_column(Text, nullable=False)
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    selected_template: Mapped[str | None] = mapped_column(Text, nullable=True, server_default=text("'modern-minimal'"))
     resume_json: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
     is_parsed: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
     status: Mapped[ResumeStatus] = mapped_column(

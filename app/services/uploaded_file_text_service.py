@@ -66,6 +66,10 @@ class UploadedFileTextService:
     def _extract_pdf_text(self, file_content: bytes) -> str:
         parts: list[str] = []
 
+        pymupdf_text = self._extract_pdf_text_pymupdf(file_content)
+        if pymupdf_text.strip():
+            parts.append(pymupdf_text)
+
         block_text = self._extract_pdf_blocks(file_content)
         if block_text.strip():
             parts.append(block_text)
@@ -88,6 +92,22 @@ class UploadedFileTextService:
         # OCR fallback for scanned certificates.
         ocr_text = self._ocr_pdf(file_content)
         return self._normalize_layout_text(normalized + "\n" + ocr_text)
+
+    def _extract_pdf_text_pymupdf(self, file_content: bytes) -> str:
+        if fitz is None:
+            return ""
+
+        pages: list[str] = []
+        try:
+            with fitz.open(stream=file_content, filetype="pdf") as document:  # type: ignore[union-attr]
+                for page in document:
+                    page_text = page.get_text("text") or ""
+                    if page_text.strip():
+                        pages.append(page_text)
+        except Exception:  # noqa: BLE001
+            logger.warning("Failed text extraction with PyMuPDF", exc_info=True)
+
+        return "\n\n".join(pages)
 
     def _extract_pdf_blocks(self, file_content: bytes) -> str:
         if fitz is None:
