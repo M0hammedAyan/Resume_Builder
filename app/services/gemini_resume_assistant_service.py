@@ -18,7 +18,7 @@ class GeminiResumeAssistantService:
 
     def __init__(self) -> None:
         self.api_key = os.getenv("GOOGLE_API_KEY", "")
-        self.model_name = os.getenv("GOOGLE_GEMINI_MODEL", "gemini-1.5-pro")
+        self.model_name = os.getenv("GOOGLE_GEMINI_MODEL", "gemini-2.0-flash")
         self._model = None
 
         if self.api_key:

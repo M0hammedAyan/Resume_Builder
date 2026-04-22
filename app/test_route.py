@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import get_current_user, hash_password
 from app.models.user import User
+from app.services.gemini_service import gemini_service
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -42,6 +43,22 @@ class ProtectedTestDbOutData(BaseModel):
 class ProtectedTestDbOut(BaseModel):
     status: str
     data: ProtectedTestDbOutData
+
+
+class TestAIOut(BaseModel):
+    response: str | None = None
+    error: str | None = None
+
+
+@router.get("/test-ai", response_model=TestAIOut)
+def test_ai() -> TestAIOut:
+    logger.info("/test-ai request received")
+    try:
+        result = gemini_service.generate_text("Say hello")
+        return TestAIOut(response=result)
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("/test-ai failed")
+        return TestAIOut(error=str(exc))
 
 
 @router.get("/test-db", response_model=ProtectedTestDbOut, status_code=status.HTTP_200_OK)

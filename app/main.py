@@ -1,10 +1,13 @@
 import logging
 import time
 
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.requests import Request
 from starlette.responses import Response
+
+load_dotenv(override=True)
 
 from app.test_route import router as test_router
 from app.core.database import init_db

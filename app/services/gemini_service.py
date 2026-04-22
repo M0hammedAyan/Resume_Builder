@@ -16,17 +16,7 @@ class GeminiService:
 
     def __init__(self) -> None:
         self.api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-        self.model_name = os.getenv("GEMINI_MODEL", "gemini-1.5-flash-latest")
-        fallback_env = os.getenv("GEMINI_FALLBACK_MODELS", "")
-        fallback_models = [m.strip() for m in fallback_env.split(",") if m.strip()]
-        if not fallback_models:
-            fallback_models = [
-                "gemini-1.5-flash-latest",
-                "gemini-1.5-pro-latest",
-                "gemini-2.0-flash",
-                "gemini-pro",
-            ]
-        self.fallback_models = [m for m in fallback_models if m != self.model_name]
+        self.model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 
         if not self.api_key:
             raise RuntimeError("GEMINI_API_KEY not set")
@@ -84,24 +74,8 @@ Text:
         try:
             response = self.model.generate_content(prompt)
         except Exception as exc:
-            message = str(exc).lower()
-            can_retry_model = "not found" in message or "is not supported" in message
-            if not can_retry_model:
-                logger.exception("Gemini API failed")
-                raise RuntimeError("AI service unavailable") from exc
-
-            for candidate in self.fallback_models:
-                try:
-                    logger.warning("Gemini model '%s' unavailable, retrying with '%s'", self.model_name, candidate)
-                    model, response = self._try_model(candidate, prompt)
-                    self.model = model
-                    self.model_name = candidate
-                    break
-                except Exception:
-                    continue
-            else:
-                logger.exception("Gemini API failed across all fallback models")
-                raise RuntimeError("AI service unavailable") from exc
+            logger.exception("Gemini API failed")
+            raise RuntimeError(f"AI FAILED [{self.model_name}]: {exc}") from exc
 
         elapsed_ms = round((time.perf_counter() - started) * 1000, 2)
         text = (getattr(response, "text", "") or "").strip()

@@ -1,12 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Download, Loader2, Menu, Save } from "lucide-react";
+import { AlignCenter, AlignLeft, AlignRight, Bold, Italic, List, Minus, Palette, PilcrowSquare, Table, Type, Underline } from "lucide-react";
 import { chatAssistResume, chatUpdateResume, createResumeRecord, exportResumeFile, getCurrentUser, getResumeById, listResumes, reparseResume, updateResume } from "../services/api.js";
-import ResumeStudioSidebar from "../components/resumeStudio/ResumeStudioSidebar.jsx";
-import EditableSection from "../components/resumeStudio/EditableSection.jsx";
-import AppSidebarNav from "../components/layout/AppSidebarNav";
 import { Button } from "../components/ui/Button";
-import { Badge } from "../components/ui/Badge";
 import { Card } from "../components/ui/Card";
 
 const PRESET_SECTION_KEYS = new Set(["projects", "certifications", "achievements"]);
@@ -414,12 +409,155 @@ const isSectionEmpty = (section) =>
         ? section.items.every((item) => Object.values(item).every((value) => !normalizeText(value)))
         : !normalizeText(section.content);
 
+const studioStateToLatex = (studioState) => {
+  const byId = (id) => studioState.sections.find((section) => section.id === id);
+  const personal = byId("personal")?.fields ?? {};
+  const skills = normalizeText(byId("skills")?.content)
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const experience = (byId("experience")?.items ?? []).filter((item) => Object.values(item).some((value) => normalizeText(value)));
+  const projects = (byId("projects")?.items ?? []).filter((item) => Object.values(item).some((value) => normalizeText(value)));
+
+  return [
+    "% Resume Studio LaTeX Draft",
+    "\\documentclass[11pt]{article}",
+    "\\begin{document}",
+    `\\section*{${normalizeText(personal.name) || "Your Name"}}`,
+    `${normalizeText(personal.email)} ${normalizeText(personal.phone)} ${normalizeText(personal.links)}`.trim(),
+    "",
+    "\\section*{Summary}",
+    normalizeText(personal.summary) || "% Add your summary",
+    "",
+    "\\section*{Skills}",
+    skills.length ? skills.join(" \\\\textbullet{} ") : "% Add skills",
+    "",
+    "\\section*{Experience}",
+    ...experience.flatMap((item) => [
+      `\\textbf{${normalizeText(item.title)}} \\hfill ${normalizeText(item.duration)}`,
+      `${normalizeText(item.company)}`,
+      `${normalizeText(item.description)}`,
+      "",
+    ]),
+    "\\section*{Projects}",
+    ...projects.flatMap((item) => [
+      `\\textbf{${normalizeText(item.title)}} \\hfill ${normalizeText(item.duration)}`,
+      `${normalizeText(item.company)} ${normalizeText(item.link)}`.trim(),
+      `${normalizeText(item.description)}`,
+      "",
+    ]),
+    "\\end{document}",
+  ]
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n");
+};
+
+const A4_WIDTH = 794;
+const A4_HEIGHT = 1123;
+const A4_CONTENT_HEIGHT = 1000;
+
+const splitHtmlIntoBlocks = (html) => {
+  const temp = document.createElement("div");
+  temp.innerHTML = html || "<p><br/></p>";
+
+  const blocks = Array.from(temp.childNodes)
+    .map((node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const text = normalizeText(node.textContent);
+        return text ? `<p>${text}</p>` : "";
+      }
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        return node.outerHTML;
+      }
+      return "";
+    })
+    .filter(Boolean);
+
+  return blocks.length > 0 ? blocks : ["<p><br/></p>"];
+};
+
+const paginateHtmlToPages = (html, measureEl) => {
+  const blocks = splitHtmlIntoBlocks(html);
+  const pages = [];
+  let currentBlocks = [];
+
+  for (const block of blocks) {
+    const candidate = [...currentBlocks, block].join("");
+    measureEl.innerHTML = candidate;
+
+    if (measureEl.scrollHeight > A4_CONTENT_HEIGHT && currentBlocks.length > 0) {
+      pages.push(currentBlocks.join(""));
+      currentBlocks = [block];
+      measureEl.innerHTML = block;
+    } else {
+      currentBlocks.push(block);
+    }
+  }
+
+  if (currentBlocks.length > 0) {
+    pages.push(currentBlocks.join(""));
+  }
+
+  return pages.length > 0 ? pages : ["<p><br/></p>"];
+};
+
+const buildDocumentHtmlFromStudio = (studioState) => {
+  const byId = (id) => studioState.sections.find((section) => section.id === id);
+  const personal = byId("personal")?.fields ?? {};
+  const education = byId("education")?.items ?? [];
+  const experience = byId("experience")?.items ?? [];
+  const projects = byId("projects")?.items ?? [];
+  const skills = normalizeText(byId("skills")?.content)
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  const custom = studioState.sections.filter((section) => section.type === "custom" && normalizeText(section.content));
+
+  const safe = (value) => String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  const rows = (items, mapper) => items
+    .filter((item) => Object.values(item ?? {}).some((value) => normalizeText(value)))
+    .map(mapper)
+    .join("");
+
+  return `
+    <h1 style="text-align:center;margin:0 0 10px;font-size:30px;line-height:1.2;">${safe(personal.name || "Your Name")}</h1>
+    <p style="text-align:center;margin:0 0 18px;color:#475569;font-size:12px;">${safe([personal.email, personal.phone, personal.links].filter(Boolean).join(" | "))}</p>
+    <hr />
+    <h2 style="font-size:12px;text-transform:uppercase;letter-spacing:0.18em;margin:18px 0 8px;">Summary</h2>
+    <p>${safe(personal.summary || "Add your summary here")}</p>
+    <h2 style="font-size:12px;text-transform:uppercase;letter-spacing:0.18em;margin:18px 0 8px;">Skills</h2>
+    <p>${safe(skills.join(" • "))}</p>
+    <h2 style="font-size:12px;text-transform:uppercase;letter-spacing:0.18em;margin:18px 0 8px;">Experience</h2>
+    ${rows(
+      experience,
+      (item) => `<p><strong>${safe(item.title)}</strong> ${safe(item.company)} ${safe(item.duration)}</p><p>${safe(item.description)}</p>`,
+    )}
+    <h2 style="font-size:12px;text-transform:uppercase;letter-spacing:0.18em;margin:18px 0 8px;">Projects</h2>
+    ${rows(
+      projects,
+      (item) => `<p><strong>${safe(item.title)}</strong> ${safe(item.company)} ${safe(item.duration)}</p><p>${safe(item.description)}</p>`,
+    )}
+    <h2 style="font-size:12px;text-transform:uppercase;letter-spacing:0.18em;margin:18px 0 8px;">Education</h2>
+    ${rows(education, (item) => `<p><strong>${safe(item.institution)}</strong> ${safe(item.degree)} ${safe(item.year)}</p>`)}
+    ${custom
+      .map(
+        (section) =>
+          `<h2 style="font-size:12px;text-transform:uppercase;letter-spacing:0.18em;margin:18px 0 8px;">${safe(section.title)}</h2><p>${safe(section.content).replace(/\n/g, "<br />")}</p>`,
+      )
+      .join("")}
+  `;
+};
+
 function ResumeStudio({ resumeJson, setResumeJson, resumeId, setResumeId }) {
-  const navigate = useNavigate();
   const [studioState, setStudioState] = useState(() => createStudioState());
   const [activeSectionId, setActiveSectionId] = useState("personal");
   const [loading, setLoading] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [saveStatus, setSaveStatus] = useState("Saved");
   const [errorMessage, setErrorMessage] = useState("");
   const [chatInput, setChatInput] = useState("");
@@ -436,12 +574,22 @@ function ResumeStudio({ resumeJson, setResumeJson, resumeId, setResumeId }) {
   const [parseWarning, setParseWarning] = useState(false);
   const [reparseLoading, setReparseLoading] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState("modern-minimal");
+  const [latexSource, setLatexSource] = useState("");
+  const [showLatexModal, setShowLatexModal] = useState(false);
+  const [docPages, setDocPages] = useState(["<p><br/></p>"]);
+  const [activePageIndex, setActivePageIndex] = useState(0);
+  const [fontFamily, setFontFamily] = useState("Georgia");
+  const [fontSize, setFontSize] = useState("3");
+  const [textColor, setTextColor] = useState("#0f172a");
   const sectionRefs = useRef({});
   const hydratedRef = useRef(false);
   const lastSavedSerializedRef = useRef("");
   const saveSequenceRef = useRef(0);
   const saveTimeoutRef = useRef(null);
   const initialResumeRef = useRef({ resumeJson, resumeId });
+  const pageRefs = useRef([]);
+  const hiddenMeasureRef = useRef(null);
+  const skipStudioToDocSyncRef = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -552,6 +700,30 @@ function ResumeStudio({ resumeJson, setResumeJson, resumeId, setResumeId }) {
 
     return () => observer.disconnect();
   }, [studioState.sections]);
+
+  useEffect(() => {
+    setLatexSource(studioStateToLatex(studioState));
+  }, [studioState]);
+
+  const repaginate = (htmlSource) => {
+    const layer = hiddenMeasureRef.current;
+    if (!layer) {
+      return;
+    }
+
+    const nextPages = paginateHtmlToPages(htmlSource, layer);
+    setDocPages(nextPages);
+    setActivePageIndex((current) => Math.min(current, Math.max(nextPages.length - 1, 0)));
+  };
+
+  useEffect(() => {
+    if (loading || skipStudioToDocSyncRef.current) {
+      return;
+    }
+
+    const nextHtml = buildDocumentHtmlFromStudio(studioState);
+    repaginate(nextHtml);
+  }, [loading, studioState]);
 
   useEffect(() => {
     if (!hydratedRef.current) {
@@ -1060,281 +1232,183 @@ function ResumeStudio({ resumeJson, setResumeJson, resumeId, setResumeId }) {
     }
   };
 
-  const sectionSummaries = useMemo(
-    () =>
-      studioState.sections.map((section) => ({
-        id: section.id,
-        title: section.title,
-        description: section.description,
-        isEmpty: isSectionEmpty(section),
-      })),
-    [studioState.sections],
-  );
+  const execDoc = (command, value = null) => {
+    const activeNode = pageRefs.current[activePageIndex];
+    if (!activeNode) {
+      return;
+    }
+    activeNode.focus();
+    document.execCommand(command, false, value);
+  };
 
-  const openRecruiterLens = () => {
-    navigate("/recruiter-lens");
+  const insertLine = () => execDoc("insertHorizontalRule");
+
+  const insertTable = () => {
+    const tableHtml = '<table class="doc-table"><tr><td>&nbsp;</td><td>&nbsp;</td></tr><tr><td>&nbsp;</td><td>&nbsp;</td></tr></table><p><br/></p>';
+    execDoc("insertHTML", tableHtml);
+  };
+
+  const insertPage = () => {
+    setDocPages((prev) => {
+      const index = activePageIndex + 1;
+      const next = [...prev];
+      next.splice(index, 0, "<p><br/></p>");
+      setActivePageIndex(index);
+      return next;
+    });
+  };
+
+  const handlePageInput = () => {
+    const html = pageRefs.current
+      .map((node) => node?.innerHTML ?? "")
+      .join("");
+
+    skipStudioToDocSyncRef.current = true;
+    repaginate(html);
+    window.setTimeout(() => {
+      skipStudioToDocSyncRef.current = false;
+    }, 0);
   };
 
   return (
-    <div className="min-h-screen app-shell-gradient">
-      <AppSidebarNav />
-      <div className="mx-auto max-w-[1600px] px-4 py-4 sm:px-6 sm:py-6 lg:pl-64">
-        {parseWarning ? (
-          <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900 shadow-sm">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="font-semibold">We couldn't fully extract your resume.</p>
-                <p className="text-sm">Please review and edit the content. You can re-run AI parsing if you want another pass.</p>
+    <div className="min-h-screen bg-white">
+      <div className="mx-auto max-w-[1680px] px-4 py-4">
+        <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-2 py-1">
+              <Type className="h-4 w-4 text-slate-500" />
+              <select
+                value={fontFamily}
+                onChange={(event) => {
+                  setFontFamily(event.target.value);
+                  execDoc("fontName", event.target.value);
+                }}
+                className="bg-transparent text-sm outline-none"
+              >
+                <option value="Georgia">Georgia</option>
+                <option value="Times New Roman">Times New Roman</option>
+                <option value="Arial">Arial</option>
+                <option value="Calibri">Calibri</option>
+              </select>
+            </div>
+
+            <select
+              value={fontSize}
+              onChange={(event) => {
+                setFontSize(event.target.value);
+                execDoc("fontSize", event.target.value);
+              }}
+              className="rounded-xl border border-slate-200 px-2 py-1 text-sm outline-none"
+            >
+              <option value="1">10</option>
+              <option value="2">12</option>
+              <option value="3">14</option>
+              <option value="4">18</option>
+              <option value="5">24</option>
+            </select>
+
+            <Button variant="secondary" onClick={() => execDoc("bold")}><Bold className="h-4 w-4" /></Button>
+            <Button variant="secondary" onClick={() => execDoc("italic")}><Italic className="h-4 w-4" /></Button>
+            <Button variant="secondary" onClick={() => execDoc("underline")}><Underline className="h-4 w-4" /></Button>
+
+            <label className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-2 py-1 text-sm text-slate-600">
+              <Palette className="h-4 w-4" />
+              <input
+                type="color"
+                value={textColor}
+                onChange={(event) => {
+                  setTextColor(event.target.value);
+                  execDoc("foreColor", event.target.value);
+                }}
+                className="h-6 w-8 border-0 bg-transparent p-0"
+              />
+            </label>
+
+            <Button variant="secondary" onClick={() => execDoc("justifyLeft")}><AlignLeft className="h-4 w-4" /></Button>
+            <Button variant="secondary" onClick={() => execDoc("justifyCenter")}><AlignCenter className="h-4 w-4" /></Button>
+            <Button variant="secondary" onClick={() => execDoc("justifyRight")}><AlignRight className="h-4 w-4" /></Button>
+            <Button variant="secondary" onClick={() => execDoc("insertUnorderedList")}><List className="h-4 w-4" /></Button>
+            <Button variant="secondary" onClick={insertLine}><Minus className="h-4 w-4" /></Button>
+            <Button variant="secondary" onClick={insertTable}><Table className="h-4 w-4" /></Button>
+            <Button variant="secondary" onClick={insertPage}><PilcrowSquare className="h-4 w-4" /></Button>
+            <Button variant="secondary" onClick={() => setShowLatexModal(true)}>LaTeX</Button>
+          </div>
+        </div>
+
+        <div className="mt-4 pr-[332px]">
+          <div className="doc-pages-canvas !bg-white !p-0">
+            {loading ? (
+              <Card className="flex items-center gap-2 p-4 text-sm text-slate-600">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading document...
+              </Card>
+            ) : (
+              docPages.map((html, index) => (
+                <article
+                  key={`page-${index}`}
+                  className={`doc-page ${index === activePageIndex ? "doc-page-active" : ""}`}
+                  style={{ width: `${A4_WIDTH}px`, height: `${A4_HEIGHT}px` }}
+                  onMouseDown={() => setActivePageIndex(index)}
+                >
+                  <div className="doc-page-inner" style={{ padding: "60px 56px" }}>
+                    <div
+                      ref={(node) => {
+                        pageRefs.current[index] = node;
+                      }}
+                      className="doc-editor-content"
+                      contentEditable
+                      suppressContentEditableWarning
+                      onInput={handlePageInput}
+                      onFocus={() => setActivePageIndex(index)}
+                      dangerouslySetInnerHTML={{ __html: html }}
+                    />
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+        </div>
+
+        <aside className="fixed right-4 top-[88px] z-20 w-[300px] rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_12px_35px_rgba(15,23,42,0.08)]">
+          <p className="mb-2 text-sm font-semibold text-slate-900">AI Panel</p>
+          <input
+            value={chatInput}
+            onChange={(event) => setChatInput(event.target.value)}
+            placeholder="Ask AI to improve your resume"
+            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400"
+            disabled={chatLoading || loading}
+          />
+          <div className="mt-2 flex gap-2">
+            <Button onClick={submitChatUpdate} disabled={chatLoading || loading || !normalizeText(chatInput)}>
+              {chatLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send"}
+            </Button>
+            <Button variant="secondary" onClick={handleReparse} disabled={!resumeId || reparseLoading}>
+              Reparse
+            </Button>
+          </div>
+          {chatNotice ? <p className="mt-2 text-xs text-emerald-700">{chatNotice}</p> : null}
+          {chatError ? <p className="mt-2 text-xs text-rose-700">{chatError}</p> : null}
+        </aside>
+
+        <div className="doc-hidden-editor">
+          <div ref={hiddenMeasureRef} className="doc-editor-content" style={{ width: `${A4_WIDTH}px`, padding: "60px 56px" }} />
+        </div>
+
+        {showLatexModal ? (
+          <div className="fixed inset-0 z-30 flex items-center justify-center bg-slate-950/40 p-4">
+            <div className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-slate-900">LaTeX Editor</h2>
+                <Button variant="secondary" onClick={() => setShowLatexModal(false)}>Close</Button>
               </div>
-              <Button variant="secondary" onClick={handleReparse} loading={reparseLoading} disabled={!resumeId || reparseLoading}>
-                Re-run AI Parsing
-              </Button>
+              <textarea
+                value={latexSource}
+                onChange={(event) => setLatexSource(event.target.value)}
+                className="h-[420px] w-full rounded-xl border border-slate-200 bg-slate-950 p-3 font-mono text-xs text-slate-100 outline-none"
+              />
             </div>
           </div>
         ) : null}
-        <header className="mb-4 flex flex-col gap-3 border-b border-slate-200/80 pb-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <Badge className="w-fit">Resume Studio</Badge>
-            <div className="mt-3 flex items-center gap-3">
-              <h1 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">Modern Resume Editor</h1>
-              <span
-                className={`rounded-full border px-2.5 py-1 text-xs font-medium ${
-                  saveStatus === "Saved"
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                    : saveStatus === "Saving..."
-                      ? "border-amber-200 bg-amber-50 text-amber-700"
-                      : "border-rose-200 bg-rose-50 text-rose-700"
-                }`}
-              >
-                {saveStatus}
-              </span>
-              <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600">
-                Template: {selectedTemplate}
-              </span>
-            </div>
-            <p className="mt-2 max-w-2xl text-sm text-slate-500">
-              Inline editing, smooth autosave, and calm AI assistance in a distraction-free layout.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button variant="secondary" className="md:hidden" onClick={() => setSidebarOpen(true)}>
-              <Menu className="mr-2 h-4 w-4" /> Sections
-            </Button>
-            <Button variant="secondary" onClick={() => navigate("/resume")}>Back</Button>
-            <Button
-              variant="secondary"
-              onClick={openRecruiterLens}
-              disabled={!resumeId}
-            >
-              Recruiter Lens
-            </Button>
-            <Button variant="secondary" onClick={() => navigate("/templates")}>
-              Templates
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() => downloadExport("pdf")}
-              disabled={!resumeId || Boolean(exportingFormat)}
-            >
-              {exportingFormat === "pdf" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-              Export PDF
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() => downloadExport("docx")}
-              disabled={!resumeId || Boolean(exportingFormat)}
-            >
-              {exportingFormat === "docx" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-              Export DOCX
-            </Button>
-            <Button onClick={persistNow}>
-              <Save className="mr-2 h-4 w-4" /> Save now
-            </Button>
-          </div>
-        </header>
-
-        <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
-          <ResumeStudioSidebar
-            sections={sectionSummaries}
-            activeSectionId={activeSectionId}
-            onSelectSection={selectSection}
-            onAddSection={createPresetSection}
-            onCreateCustomSection={createCustomSection}
-            isOpen={sidebarOpen}
-            onToggleOpen={() => setSidebarOpen((current) => !current)}
-            saveStatus={saveStatus}
-          />
-
-          <main className="min-w-0 space-y-4">
-            <div className="xl:hidden">
-              <Card className="space-y-3 p-4">
-                <p className="text-sm font-semibold text-slate-900">AI Chat Update</p>
-                <p className="text-sm text-slate-600">Describe changes in natural language. The assistant will update resume JSON and re-render the editor.</p>
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <input
-                    value={chatInput}
-                    onChange={(event) => setChatInput(event.target.value)}
-                    placeholder='Example: I built a fraud detection system using Python and ML'
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-                    disabled={chatLoading || loading}
-                  />
-                  <Button onClick={submitChatUpdate} disabled={chatLoading || loading || !normalizeText(chatInput)}>
-                    {chatLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    Send
-                  </Button>
-                </div>
-                {chatQuestion ? <div className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700">{chatQuestion}</div> : null}
-                {chatPreview?.suggested_update ? (
-                  <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                    <p className="text-sm font-semibold text-slate-900">Project Preview</p>
-                    <div className="space-y-1 text-sm text-slate-700">
-                      <p><span className="font-medium text-slate-900">Title:</span> {chatPreview.suggested_update.title || "-"}</p>
-                      <p><span className="font-medium text-slate-900">Description:</span> {chatPreview.suggested_update.description || "-"}</p>
-                    </div>
-                    {Array.isArray(chatPreview.new_skills) && chatPreview.new_skills.length > 0 ? (
-                      <div className="space-y-2">
-                        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">New skills detected</p>
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          {chatPreview.new_skills.map((skill) => (
-                            <label key={skill} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-700">
-                              <input
-                                type="checkbox"
-                                checked={selectedNewSkills.includes(skill)}
-                                onChange={() => toggleNewSkill(skill)}
-                              />
-                              {skill}
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
-                    <div className="flex justify-end">
-                      <Button onClick={confirmChatPreview} disabled={chatLoading}>Confirm Add Project</Button>
-                    </div>
-                  </div>
-                ) : null}
-                {chatNotice ? <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{chatNotice}</div> : null}
-                {chatError ? <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{chatError}</div> : null}
-                {lastChatSnapshot ? (
-                  <div className="flex justify-end">
-                    <Button variant="ghost" onClick={undoLastChatUpdate} disabled={chatLoading}>
-                      Undo last AI update
-                    </Button>
-                  </div>
-                ) : null}
-              </Card>
-            </div>
-
-            <div className="floating-chat-shell hidden xl:block">
-              <Card className="floating-chat-panel w-[24rem] space-y-3 border-slate-200/80 bg-white/90 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">AI Chat Update</p>
-                    <p className="text-xs text-slate-500">Floating assistant</p>
-                  </div>
-                  <Badge tone="neutral">Live</Badge>
-                </div>
-                <p className="text-sm text-slate-600">Describe changes in natural language. The assistant will update resume JSON and re-render the editor.</p>
-                <div className="flex flex-col gap-2">
-                  <input
-                    value={chatInput}
-                    onChange={(event) => setChatInput(event.target.value)}
-                    placeholder='Example: I built a fraud detection system using Python and ML'
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-                    disabled={chatLoading || loading}
-                  />
-                  <Button onClick={submitChatUpdate} disabled={chatLoading || loading || !normalizeText(chatInput)}>
-                    {chatLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    Send update
-                  </Button>
-                </div>
-                {chatQuestion ? <div className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700">{chatQuestion}</div> : null}
-                {chatPreview?.suggested_update ? (
-                  <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                    <p className="text-sm font-semibold text-slate-900">Project Preview</p>
-                    <div className="space-y-1 text-sm text-slate-700">
-                      <p><span className="font-medium text-slate-900">Title:</span> {chatPreview.suggested_update.title || "-"}</p>
-                      <p><span className="font-medium text-slate-900">Description:</span> {chatPreview.suggested_update.description || "-"}</p>
-                    </div>
-                    {Array.isArray(chatPreview.new_skills) && chatPreview.new_skills.length > 0 ? (
-                      <div className="space-y-2">
-                        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">New skills detected</p>
-                        <div className="grid gap-2">
-                          {chatPreview.new_skills.map((skill) => (
-                            <label key={skill} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-700">
-                              <input
-                                type="checkbox"
-                                checked={selectedNewSkills.includes(skill)}
-                                onChange={() => toggleNewSkill(skill)}
-                              />
-                              {skill}
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
-                    <div className="flex justify-end">
-                      <Button onClick={confirmChatPreview} disabled={chatLoading}>Confirm Add Project</Button>
-                    </div>
-                  </div>
-                ) : null}
-                {chatNotice ? <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{chatNotice}</div> : null}
-                {chatError ? <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{chatError}</div> : null}
-                {lastChatSnapshot ? (
-                  <div className="flex justify-end">
-                    <Button variant="ghost" onClick={undoLastChatUpdate} disabled={chatLoading}>
-                      Undo last AI update
-                    </Button>
-                  </div>
-                ) : null}
-              </Card>
-            </div>
-
-            {loading ? (
-              <Card className="flex items-center justify-center gap-3 p-6 text-sm text-slate-600">
-                <Loader2 className="h-4 w-4 animate-spin text-slate-500" />
-                Loading resume editor...
-              </Card>
-            ) : (
-              studioState.sections.map((section) => (
-                <EditableSection
-                  key={section.id}
-                  ref={registerSectionRef(section.id)}
-                  section={{
-                    ...section,
-                    isEmpty:
-                      section.type === "personal"
-                        ? !Object.values(section.fields).some((value) => normalizeText(value))
-                        : section.type === "skills"
-                          ? !normalizeText(section.content)
-                          : Array.isArray(section.items)
-                            ? section.items.every((item) => Object.values(item).every((value) => !normalizeText(value)))
-                            : !normalizeText(section.content),
-                  }}
-                  isActive={activeSectionId === section.id}
-                  onSelect={() => selectSection(section.id)}
-                  onRenameSection={renameSection}
-                  onDeleteSection={deleteSection}
-                  onMoveSection={moveSection}
-                  onUpdatePersonalField={updatePersonalField}
-                  onUpdateListItem={updateListItem}
-                  onAddListItem={addListItem}
-                  onRemoveListItem={removeListItem}
-                  onUpdateSectionContent={updateSectionContent}
-                  onUpdateSectionTitle={updateSectionTitle}
-                />
-              ))
-            )}
-
-            {errorMessage ? (
-              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                {errorMessage}
-              </div>
-            ) : null}
-          </main>
-
-        </div>
       </div>
     </div>
   );
